@@ -122,6 +122,7 @@ export function Results() {
     copyMagnet,
     contentWidth,
     listRows,
+    setInspectingId,
   } = useStore();
 
   const search = useConcurrentSearch(query);
@@ -223,6 +224,9 @@ export function Results() {
       } else if (input === "D") {
         const r = results[clamped];
         if (r) openDownloadTo(r);
+      } else if (input === "i") {
+        const r = results[clamped];
+        if (r) setInspectingId(r.infoHash, r.magnet);
       } else if (input === "y") {
         const r = results[clamped];
         if (r) copyResultMagnet(r);

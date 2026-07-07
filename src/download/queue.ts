@@ -13,8 +13,10 @@ import {
   type SeedRecord,
 } from "./persist";
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
-import type { QueueItem, SeedItem } from "./types";
+import type { DownloadStatus, QueueItem, SeedItem, TorrentFileInfo } from "./types";
 import type { SourceId } from "../sources/types";
+import parseTorrent from "parse-torrent";
+import { promises as fs } from "node:fs";
 
 /**
  * A real seed never pulls data off the network: verifying on-disk files reads
@@ -123,7 +125,8 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private startEngine(item: QueueItem): void {
-    this.engine.add(item.id, item.magnet, item.dir, this.engineHandlers(item.id), this.trackers);
+    const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
+    this.engine.add(item.id, source, item.dir, this.engineHandlers(item.id), this.trackers);
   }
 
   // One torrent serves an item across its whole life (download -> seed ->
@@ -310,6 +313,55 @@ export class DownloadQueue extends EventEmitter {
     this.ensurePoll();
     this.changed();
     void this.persist();
+  }
+
+  async stream(id: string, targetPath?: string): Promise<string | null> {
+    return this.engine.stream(id, targetPath);
+  }
+
+  async fetchFiles(id: string, magnet?: string): Promise<TorrentFileInfo[] | null> {
+    const live = this.engine.getFiles(id);
+    if (live) return live;
+
+    if (torrentMetaExists(id)) {
+      try {
+        const buf = await fs.readFile(torrentMetaPath(id));
+        const parsed = await parseTorrent(buf) as any;
+        if (parsed.files) {
+          return parsed.files.map((f: any) => ({
+            path: f.path,
+            length: f.length,
+            downloaded: f.length,
+            selected: !this.engine.isDeselected(id, f.path),
+          }));
+        } else if (parsed.name) {
+          return [{ path: parsed.name, length: parsed.length, downloaded: parsed.length, selected: !this.engine.isDeselected(id, parsed.name) }];
+        }
+      } catch {}
+    }
+
+    if (magnet) {
+      try {
+        const files = await this.engine.fetchMetadata(id, magnet);
+        return files.map(f => ({
+          ...f,
+          selected: !this.engine.isDeselected(id, f.path)
+        }));
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  getFiles(id: string): TorrentFileInfo[] | null {
+    return this.engine.getFiles(id);
+  }
+
+  toggleFileSelection(id: string, path: string, selected: boolean): void {
+    this.engine.toggleFileSelection(id, path, selected);
+    this.emit("update");
   }
 
   togglePause(id: string): void {

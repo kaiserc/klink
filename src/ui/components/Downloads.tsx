@@ -53,6 +53,9 @@ export function Downloads() {
     openDownloadFolder,
     setDownloadFocus,
     exportTorrent,
+    streamDownload,
+    inspectingId,
+    setInspectingId,
   } = useStore();
   const active = useQueueItems(queue);
   const recent = useQueueHistory(queue);
@@ -81,6 +84,8 @@ export function Downloads() {
         if (!it) return;
         if (input === "c") queue.cancel(it.id);
         else if (input === "p") queue.togglePause(it.id);
+        else if (input === "v") streamDownload(it.id);
+        else if (input === "i" || input === "Enter" || input === " ") setInspectingId(it.id);
       } else {
         const h = recent[recentCursor];
         if (!h) return;
@@ -93,9 +98,10 @@ export function Downloads() {
             sizeBytes: h.sizeBytes,
           });
         else if (input === "c") queue.removeHistory(h.id);
+        else if (input === "i") setInspectingId(h.id);
       }
     },
-    { isActive: focused && total > 0 },
+    { isActive: focused && total > 0 && !inspectingId },
   );
 
   let focusKind: DownloadFocus | null = null;

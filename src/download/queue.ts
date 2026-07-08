@@ -13,7 +13,13 @@ import {
   type SeedRecord,
 } from "./persist";
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
-import type { DownloadStatus, QueueItem, SeedItem, TorrentFileInfo } from "./types";
+import type {
+  DownloadStatus,
+  QueueItem,
+  SeedItem,
+  TorrentFileInfo,
+  PeerInfo,
+} from "./types";
 import type { SourceId } from "../sources/types";
 import parseTorrent from "parse-torrent";
 import { promises as fs } from "node:fs";
@@ -368,8 +374,8 @@ export class DownloadQueue extends EventEmitter {
     this.emit("update");
   }
 
-  setThrottle(enabled: boolean, downLimit: number, upLimit: number): void {
-    this.engine.setThrottle(enabled, downLimit, upLimit);
+  getPeers(id: string): PeerInfo[] | null {
+    return this.engine.getPeers(id);
   }
 
   togglePause(id: string): void {

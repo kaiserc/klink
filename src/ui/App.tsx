@@ -34,6 +34,7 @@ import { Seeding } from "./components/Seeding";
 import { Spinner } from "./components/Spinner";
 import { TabTitle } from "./components/TabTitle";
 import { Files } from "./components/Files";
+import { PeerInspector } from "./components/PeerInspector";
 import { Splash } from "./views/Splash";
 import { FolderPrompt } from "./components/FolderPrompt";
 import { TrackersPrompt } from "./components/TrackersPrompt";
@@ -102,6 +103,7 @@ export function App({
   const [notice, setNotice] = useState<string | null>(null);
   const [inspectingId, setInspectingIdState] = useState<string | null>(null);
   const [inspectingMagnet, setInspectingMagnet] = useState<string | null>(null);
+  const [inspectingPeersId, setInspectingPeersId] = useState<string | null>(null);
   const [inspectFocusSelected, setInspectFocusSelected] = useState<boolean>(true);
   
   const setInspectingId = useCallback((id: string | null, magnet?: string) => {
@@ -158,6 +160,11 @@ export function App({
       queue.off("completed", onCompleted);
     };
   }, [queue]);
+
+  useEffect(() => {
+    setInspectingId(null);
+    setInspectingPeersId(null);
+  }, [section]);
 
   useEffect(
     () => () => {
@@ -458,6 +465,8 @@ export function App({
       inspectingId,
       inspectingMagnet,
       setInspectingId,
+      inspectingPeersId,
+      setInspectingPeersId,
       inspectFocusSelected,
       setInspectFocusSelected,
       toggleFileSelection,
@@ -493,6 +502,7 @@ export function App({
     notice,
     inspectingId,
     inspectingMagnet,
+    inspectingPeersId,
     toggleFileSelection,
     toggleThrottle,
     listRows,
@@ -534,7 +544,13 @@ export function App({
         void pasteFromClipboard();
         return;
       }
+      if (input === "w") {
+        if (inspectingPeersId) setInspectingPeersId(null);
+        return;
+      }
       if (key.tab) {
+        if (inspectingId) setInspectingId(null);
+        if (inspectingPeersId) setInspectingPeersId(null);
         setRegion(region === "sidebar" ? "content" : "sidebar");
         return;
       }
@@ -563,7 +579,7 @@ export function App({
         quitAll();
         return;
       }
-      if (input === "T") {
+      if (input === "b") {
         store?.toggleThrottle();
         return;
       }
@@ -657,6 +673,8 @@ export function App({
           <Box flexGrow={1} flexDirection="column">
             {inspectingId ? (
               <Files />
+            ) : inspectingPeersId ? (
+              <PeerInspector id={inspectingPeersId} />
             ) : section === "downloads" ? (
               <Downloads />
             ) : section === "seeding" ? (
@@ -669,7 +687,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, store.config.throttleEnabled, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
+            <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
           </Box>
         ) : null}
       </Box>

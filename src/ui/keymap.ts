@@ -21,7 +21,7 @@ export const HELP_GROUPS: HelpGroup[] = [
       { keys: "esc", label: "Back" },
       { keys: "o", label: "Default download folder" },
       { keys: "t", label: "Extra trackers" },
-      { keys: "T", label: "Turtle Mode (Throttle)" },
+      { keys: "b", label: "Turtle Mode (Throttle)" },
       { keys: "q", label: "Quit" },
     ],
   },
@@ -88,6 +88,7 @@ export function footerHints(
   region: Region,
   section: Section,
   throttleEnabled: boolean,
+  inspectingPeersId?: string | null,
   downloadFocus?: DownloadFocus | null,
   seedFocus?: SeedFocus | null,
   inspecting?: boolean,
@@ -95,18 +96,26 @@ export function footerHints(
 ): Hint[] {
   const getHints = (): Hint[] => {
     if (inspecting) {
-    const spaceLabel = inspectFocusSelected ? "Skip" : "Keep";
-    const spaceColor = inspectFocusSelected ? "red" : "green";
+      const spaceLabel = inspectFocusSelected ? "Skip" : "Keep";
+      const spaceColor = inspectFocusSelected ? "red" : "green";
       return [
         { keys: "↑↓", label: "Move" },
-      { keys: "space", label: spaceLabel, color: spaceColor },
+        { keys: "space", label: spaceLabel, color: spaceColor },
         { keys: "↵", label: "Open" },
         STREAM,
-      { keys: "esc", label: "Back" },
+        { keys: "esc", label: "Back" },
         ALWAYS,
       ];
-  }
-  const getHints = (): Hint[] => {
+    }
+    if (inspectingPeersId) {
+      return [
+        { keys: "s", label: "Sort" },
+        { keys: "w", label: "Close" },
+        { keys: "esc", label: "Back" },
+        SWITCH,
+        ALWAYS,
+      ];
+    }
     if (region === "sidebar") {
       return [
         NAVIGATE,
@@ -114,63 +123,72 @@ export function footerHints(
         SWITCH,
         ALWAYS,
         { keys: "q", label: "Quit" },
-        ];
-      }
-      if (section === "seeding") {
-        const label =
-          seedFocus === "seeding" ? "Pause" : seedFocus === "missing" ? "Retry" : "Resume";
-        return [{ keys: "p", label }, { keys: "c", label: "Remove" }, FOLDER, SWITCH, ALWAYS];
-      }
-      if (section === "downloads") {
-        if (downloadFocus === "paused") {
-          return [{ keys: "i", label: "Files" }, { keys: "p", label: "Resume" }, { keys: "c", label: "Cancel" }, STREAM, FOLDER, TORRENT, SWITCH, ALWAYS];
-        }
-        if (downloadFocus === "failed") {
-          return [{ keys: "i", label: "Files" }, { keys: "f", label: "Retry" }, { keys: "c", label: "Remove" }, FOLDER, TORRENT, SWITCH, ALWAYS];
-        }
-        if (downloadFocus === "recent") {
-          return [
-            { keys: "d", label: "Redownload" },
-            { keys: "c", label: "Remove" },
-            { keys: "x", label: "Clear" },
-            FOLDER,
-            TORRENT,
-            SWITCH,
-            ALWAYS,
-          ];
-        }
-      if (downloadFocus === "downloading") {
-      return [
-        { keys: "i", label: "Files" },
-        { keys: "p", label: "Pause" },
-        { keys: "c", label: "Cancel" },
-        STREAM,
-        FOLDER,
-        TORRENT,
-        SWITCH,
-        ALWAYS,
       ];
     }
-      return [{ keys: "p", label: "Pause" }, { keys: "c", label: "Cancel" }, STREAM, FOLDER, TORRENT, SWITCH, ALWAYS];
+    if (section === "seeding") {
+      const label =
+        seedFocus === "seeding" ? "Pause" : seedFocus === "missing" ? "Retry" : "Resume";
+      return [{ keys: "p", label }, { keys: "c", label: "Remove" }, FOLDER, SWITCH, ALWAYS];
+    }
+    if (section === "downloads") {
+      if (downloadFocus === "paused") {
+        return [{ keys: "i", label: "Files" }, { keys: "p", label: "Resume" }, { keys: "c", label: "Cancel" }, STREAM, FOLDER, TORRENT, SWITCH, ALWAYS];
       }
-      return [
-        NAVIGATE,
-        // The footer advertises only the default download key; D (download to a
-        // chosen folder) stays bound but lives in the `?` sheet alone.
-        { keys: "d", label: "Download" },
+      if (downloadFocus === "failed") {
+        return [{ keys: "i", label: "Files" }, { keys: "f", label: "Retry" }, { keys: "c", label: "Remove" }, FOLDER, TORRENT, SWITCH, ALWAYS];
+      }
+      if (downloadFocus === "recent") {
+        return [
+          { keys: "d", label: "Redownload" },
+          { keys: "c", label: "Remove" },
+          { keys: "x", label: "Clear" },
+          FOLDER,
+          TORRENT,
+          SWITCH,
+          ALWAYS,
+        ];
+      }
+      if (downloadFocus === "downloading") {
+        return [
+          { keys: "i", label: "Files" },
+          { keys: "p", label: "Pause" },
+          { keys: "c", label: "Cancel" },
+          STREAM,
+          FOLDER,
+          TORRENT,
+          SWITCH,
+          ALWAYS,
+        ];
+      }
+      return [{ keys: "p", label: "Pause" }, { keys: "c", label: "Cancel" }, STREAM, FOLDER, TORRENT, SWITCH, ALWAYS];
+    }
+    return [
+      NAVIGATE,
+      { keys: "d", label: "Download" },
       { keys: "i", label: "Files" },
       { keys: "y", label: "Copy" },
-        { keys: "s", label: "Sort" },
-        { keys: "/", label: "Search" },
-        SWITCH,
-        ALWAYS,
-      ];
+      { keys: "s", label: "Sort" },
+      { keys: "/", label: "Search" },
+      SWITCH,
+      ALWAYS,
+    ];
   };
 
   const hints = getHints();
+  
+  if (!inspectingPeersId && !inspecting && region === "content" && (section === "downloads" || section === "seeding")) {
+    const focusExists = section === "downloads" ? !!downloadFocus : !!seedFocus;
+    if (focusExists) {
+      const peerHint: Hint = { keys: "w", label: "Peers" };
+      const switchIdx = hints.findIndex((h) => h.keys === "tab");
+      if (switchIdx >= 0) hints.splice(switchIdx, 0, peerHint);
+      else hints.push(peerHint);
+    }
+  }
+
   const throttleHint: Hint = throttleEnabled
-    ? { keys: "T", label: "Full Speed", color: "green" }
-    : { keys: "T", label: "Turtle", color: "red" };
+    ? { keys: "b", label: "Full Speed", color: "green" }
+    : { keys: "b", label: "Turtle", color: "red" };
 
   const switchIdx = hints.findIndex((h) => h.keys === "tab");
   if (switchIdx >= 0) {
@@ -178,19 +196,6 @@ export function footerHints(
   } else {
     hints.push(throttleHint);
   }
-  return hints;
-  };
 
-  const hints = getHints();
-  const throttleHint: Hint = throttleEnabled
-    ? { keys: "T", label: "Full Speed", color: "green" }
-    : { keys: "T", label: "Turtle", color: "red" };
-
-  const switchIdx = hints.findIndex((h) => h.keys === "tab");
-  if (switchIdx >= 0) {
-    hints.splice(switchIdx, 0, throttleHint);
-  } else {
-    hints.push(throttleHint);
-  }
   return hints;
 }

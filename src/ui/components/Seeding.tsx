@@ -31,7 +31,6 @@ function statusCell(seed: SeedItem | undefined): { text: string; color?: string;
 
 export function Seeding() {
   const { queue, region, contentWidth, listRows, setNotice, openDownloadFolder, setSeedFocus, setInspectingId } =
-  const { queue, region, contentWidth, listRows, setNotice, openDownloadFolder, setSeedFocus, setInspectingId } =
     useStore();
   const history = useQueueHistory(queue);
   const seeds = useSeeds(queue);
@@ -65,6 +64,9 @@ export function Seeding() {
       } else if (input === "e") {
         const h = history[clamped];
         if (h) openDownloadFolder(h.dir);
+      } else if (input === "w") {
+        const h = history[clamped];
+        if (h) setInspectingId(h.id);
       } else if (input === "i") {
         const h = history[clamped];
         if (h) setInspectingId(h.id);

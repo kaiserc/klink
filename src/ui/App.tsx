@@ -22,7 +22,6 @@ import {
   type SeedFocus,
   type Store,
   type View,
-  useStore,
 } from "./store";
 import { Logo } from "./components/Logo";
 import { Sidebar, RAIL_WIDTH } from "./components/Sidebar";
@@ -561,7 +560,6 @@ export function App({
       if (key.tab) {
         if (inspectingId) setInspectingId(null);
         if (inspectingPeersId) setInspectingPeersId(null);
-        if (inspectingId) setInspectingId(null);
         setRegion(region === "sidebar" ? "content" : "sidebar");
         return;
       }
@@ -704,7 +702,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, inspectingId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
+            <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, inspectingId, inspectingId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
           </Box>
         ) : null}
       </Box>

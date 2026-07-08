@@ -56,6 +56,8 @@ export function Downloads() {
     streamDownload,
     inspectingId,
     setInspectingId,
+    inspectingPeersId,
+    setInspectingPeersId,
   } = useStore();
   const active = useQueueItems(queue);
   const recent = useQueueHistory(queue);
@@ -81,7 +83,7 @@ export function Downloads() {
         if (item) exportTorrent({ id: item.id, name: item.name });
       } else if (input === "w") {
         const item = inActive ? active[clamped] : null;
-        if (item) setInspectingId(item.id);
+        if (item) setInspectingPeersId(item.id);
       } else if (inActive) {
         const it = active[clamped];
         if (!it) return;
@@ -104,7 +106,7 @@ export function Downloads() {
         else if (input === "i") setInspectingId(h.id);
       }
     },
-    { isActive: focused && total > 0 && !inspectingId },
+    { isActive: focused && total > 0 && !inspectingId && !inspectingPeersId },
   );
 
   let focusKind: DownloadFocus | null = null;

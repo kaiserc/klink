@@ -51,6 +51,8 @@ export interface Store {
 
   inspectingId: string | null;
   setInspectingId: (id: string | null) => void;
+  inspectingPeersId: string | null;
+  setInspectingPeersId: (id: string | null) => void;
 
   startDownload: (input: {
     id: string;
@@ -79,6 +81,8 @@ export interface Store {
   inspectingId: string | null;
   inspectingMagnet: string | null;
   setInspectingId: (id: string | null, magnet?: string) => void;
+  inspectingPeersId: string | null;
+  setInspectingPeersId: (id: string | null) => void;
   inspectFocusSelected: boolean;
   setInspectFocusSelected: (s: boolean) => void;
   toggleFileSelection: (id: string, path: string, selected: boolean) => void;

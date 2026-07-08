@@ -87,7 +87,6 @@ export function App({
   const [captureMode, setCaptureMode] = useState<CaptureMode>("none");
   const [downloadFocus, setDownloadFocus] = useState<DownloadFocus | null>(null);
   const [seedFocus, setSeedFocus] = useState<SeedFocus | null>(null);
-  const [inspectingId, setInspectingId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [editingFolder, setEditingFolder] = useState(false);
   const [editingTrackers, setEditingTrackers] = useState(false);
@@ -105,6 +104,7 @@ export function App({
   const [notice, setNotice] = useState<string | null>(null);
   const [inspectingId, setInspectingIdState] = useState<string | null>(null);
   const [inspectingMagnet, setInspectingMagnet] = useState<string | null>(null);
+  const [inspectingPeersId, setInspectingPeersId] = useState<string | null>(null);
   const [inspectFocusSelected, setInspectFocusSelected] = useState<boolean>(true);
   
   const setInspectingId = useCallback((id: string | null, magnet?: string) => {
@@ -164,6 +164,7 @@ export function App({
 
   useEffect(() => {
     setInspectingId(null);
+    setInspectingPeersId(null);
   }, [section]);
 
   useEffect(
@@ -443,8 +444,6 @@ export function App({
       setDownloadFocus,
       seedFocus,
       setSeedFocus,
-      inspectingId,
-      setInspectingId,
       startDownload,
       requestDownloadTo,
       copyMagnet,
@@ -456,6 +455,8 @@ export function App({
       inspectingId,
       inspectingMagnet,
       setInspectingId,
+      inspectingPeersId,
+      setInspectingPeersId,
       inspectFocusSelected,
       setInspectFocusSelected,
       toggleFileSelection,
@@ -490,6 +491,7 @@ export function App({
     notice,
     inspectingId,
     inspectingMagnet,
+    inspectingPeersId,
     toggleFileSelection,
     listRows,
     compact,
@@ -531,11 +533,12 @@ export function App({
         return;
       }
       if (input === "w") {
-        if (inspectingId) setInspectingId(null);
+        if (inspectingPeersId) setInspectingPeersId(null);
         return;
       }
       if (key.tab) {
         if (inspectingId) setInspectingId(null);
+        if (inspectingPeersId) setInspectingPeersId(null);
         setRegion(region === "sidebar" ? "content" : "sidebar");
         return;
       }
@@ -548,6 +551,10 @@ export function App({
           setInspectingId(null);
           return;
         }
+        if (inspectingPeersId) {
+          setInspectingPeersId(null);
+          return;
+        }
         if (region === "content") setRegion("sidebar");
         return;
       }
@@ -555,6 +562,10 @@ export function App({
         if (captureMode === "esc") return;
         if (inspectingId) {
           setInspectingId(null);
+          return;
+        }
+        if (inspectingPeersId) {
+          setInspectingPeersId(null);
           return;
         }
         if (region === "content") {
@@ -655,8 +666,8 @@ export function App({
           <Box flexGrow={1} flexDirection="column">
             {inspectingId ? (
               <Files />
-            ) : inspectingId ? (
-              <PeerInspector id={inspectingId} />
+            ) : inspectingPeersId ? (
+              <PeerInspector id={inspectingPeersId} />
             ) : section === "downloads" ? (
               <Downloads />
             ) : section === "seeding" ? (
@@ -669,7 +680,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, inspectingId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
+            <Footer hints={footerHints(region, section, inspectingPeersId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
           </Box>
         ) : null}
       </Box>

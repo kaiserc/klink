@@ -17,7 +17,7 @@ import type {
   DownloadStatus,
   QueueItem,
   SeedItem,
-  TorrentFileInfo, 
+  TorrentFileInfo,
   PeerInfo,
 } from "./types";
 import type { SourceId } from "../sources/types";

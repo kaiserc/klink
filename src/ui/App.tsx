@@ -22,6 +22,7 @@ import {
   type SeedFocus,
   type Store,
   type View,
+  useStore,
 } from "./store";
 import { Logo } from "./components/Logo";
 import { Sidebar, RAIL_WIDTH } from "./components/Sidebar";
@@ -551,6 +552,10 @@ export function App({
         return;
       }
       if (input === "w") {
+        if (inspectingPeersId) setInspectingPeersId(null);
+        return;
+      }
+      if (input === "w") {
         if (inspectingId) setInspectingId(null);
         return;
       }
@@ -693,8 +698,6 @@ export function App({
               <Files />
             ) : inspectingPeersId ? (
               <PeerInspector id={inspectingPeersId} />
-            ) : inspectingId ? (
-              <PeerInspector id={inspectingId} />
             ) : section === "downloads" ? (
               <Downloads />
             ) : section === "seeding" ? (

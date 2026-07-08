@@ -16,11 +16,31 @@ export type DownloadStatus = "downloading" | "paused" | "completed" | "failed";
 
 export type SeedStatus = "seeding" | "paused" | "missing";
 
+export interface PeerInfo {
+  ip: string;
+  client: string;
+  peerId: string;
+  downloaded: number;
+  uploaded: number;
+  downSpeed: number;
+  upSpeed: number;
+}
+
 export interface TorrentFileInfo {
   path: string;
   length: number;
   downloaded: number;
   selected: boolean;
+}
+
+export interface PeerInfo {
+  ip: string;
+  client: string;
+  peerId: string;
+  downloaded: number;
+  uploaded: number;
+  downSpeed: number;
+  upSpeed: number;
 }
 
 export interface PeerInfo {

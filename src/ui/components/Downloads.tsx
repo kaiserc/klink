@@ -56,7 +56,6 @@ export function Downloads() {
     streamDownload,
     inspectingId,
     setInspectingId,
-    setInspectingPeersId,
     inspectingPeersId,
     setInspectingPeersId,
   } = useStore();

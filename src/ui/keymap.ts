@@ -87,6 +87,7 @@ const TORRENT: Hint = { keys: "s", label: "Export" };
 export function footerHints(
   region: Region,
   section: Section,
+  inspectingPeersId?: string | null,
   throttleEnabled: boolean,
   inspectingPeersId?: string | null,
   downloadFocus?: DownloadFocus | null,

@@ -64,6 +64,9 @@ export function Seeding() {
       } else if (input === "e") {
         const h = history[clamped];
         if (h) openDownloadFolder(h.dir);
+      } else if (input === "w") {
+        const h = history[clamped];
+        if (h) setInspectingPeersId(h.id);
       } else if (input === "i") {
         const h = history[clamped];
         if (h) setInspectingId(h.id);

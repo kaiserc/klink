@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { Config } from "../config/config";
 import type { DownloadQueue } from "../download/queue";
 import type { HistoryItem } from "../download/history";
-import type { QueueItem, SeedItem, TorrentFileInfo, PeerInfo, PeerInfo } from "../download/types";
+import type { QueueItem, SeedItem, TorrentFileInfo } from "../download/types";
 import type { SourceGroup, SourceId } from "../sources/types";
 
 export type View = "splash" | "browser";
@@ -208,5 +208,3 @@ export function useFiles(queue: DownloadQueue, id: string | null, magnet: string
   
   return files;
 }
-
-

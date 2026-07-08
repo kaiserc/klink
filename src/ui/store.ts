@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { Config } from "../config/config";
 import type { DownloadQueue } from "../download/queue";
 import type { HistoryItem } from "../download/history";
-import type { QueueItem, SeedItem } from "../download/types";
+import type { QueueItem, SeedItem, TorrentFileInfo } from "../download/types";
 import type { SourceGroup, SourceId } from "../sources/types";
 
 export type View = "splash" | "browser";
@@ -70,10 +70,15 @@ export interface Store {
   // Copies the cached .torrent metadata into the item's download folder and
   // reports the outcome through the notice line.
   exportTorrent: (input: { id: string; name: string }) => void;
-
+  streamDownload: (id: string, targetPath?: string) => void;
   notice: string | null;
-  setNotice: (s: string | null) => void;
-
+  setNotice: (msg: string | null) => void;
+  inspectingId: string | null;
+  inspectingMagnet: string | null;
+  setInspectingId: (id: string | null, magnet?: string) => void;
+  inspectFocusSelected: boolean;
+  setInspectFocusSelected: (s: boolean) => void;
+  toggleFileSelection: (id: string, path: string, selected: boolean) => void;
   quitAll: () => void;
 
   listRows: number;
@@ -154,4 +159,44 @@ export function useSeeds(queue: DownloadQueue): Map<string, SeedItem> {
     };
   }, [queue]);
   return seeds;
+}
+
+export function useFiles(queue: DownloadQueue, id: string | null, magnet: string | null): TorrentFileInfo[] | null {
+  const [files, setFiles] = useState<TorrentFileInfo[] | null>(null);
+  
+  useEffect(() => {
+    if (!id) {
+      setFiles(null);
+      return;
+    }
+    
+    let cancelled = false;
+    void queue.fetchFiles(id, magnet ?? undefined)
+      .then((fetched) => {
+        if (!cancelled) setFiles(fetched);
+      })
+      .catch(() => {});
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onUpdate = (): void => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        void queue.fetchFiles(id, magnet ?? undefined)
+          .then((fetched) => {
+            if (!cancelled) setFiles(fetched);
+          })
+          .catch(() => {});
+      }, 500);
+    };
+    queue.on("update", onUpdate);
+    
+    return () => {
+      cancelled = true;
+      queue.off("update", onUpdate);
+      if (timer) clearTimeout(timer);
+    };
+  }, [queue, id, magnet]);
+  
+  return files;
 }

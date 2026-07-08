@@ -5,6 +5,9 @@ declare module "webtorrent" {
     name: string;
     path: string;
     length: number;
+    downloaded: number;
+    select(): void;
+    deselect(): void;
   }
 
   interface Torrent extends EventEmitter {
@@ -52,6 +55,7 @@ declare module "webtorrent" {
     readonly downloadSpeed: number;
     readonly uploadSpeed: number;
     readonly torrentPort: number;
+    createServer(opts?: any): any;
     add(
       torrentId: string,
       opts?: TorrentOptions,

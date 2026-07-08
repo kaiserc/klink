@@ -4,7 +4,7 @@
   fetchFromGitHub,
   # dependencies
   fetchurl,
-  nodejs_22,
+  nodejs_26,
   wl-clipboard,
   xclip,
 }:
@@ -22,7 +22,7 @@ buildNpmPackage (finalAttrs: {
     hash = "sha256-XMwJ1nVVcwXOhj3moqBMRngOAnAfbOuICHMAYQheeWA=";
   };
 
-  nodejs = nodejs_22;
+  nodejs = nodejs_26;
   npmDepsHash = "sha256-FT4SUjuEKefMG2zzA/QhafZbLab0tUeWHnO30+7smnI=";
   # ignore-scripts for ip-set broken preinstall
   npmFlags = [ "--ignore-scripts" ];

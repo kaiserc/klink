@@ -1,4 +1,6 @@
 import WebTorrent, { type Torrent } from "webtorrent";
+import type { TorrentFileInfo } from "./types";
+import { saveTorrentMeta } from "./persist";
 
 export interface TorrentProgress {
   progress: number;
@@ -35,6 +37,9 @@ function message(e: unknown): string {
 export class TorrentEngine {
   private client: WebTorrent | null = null;
   private torrents = new Map<string, Torrent>();
+  private server: any = null;
+  private deselectedFiles = new Map<string, Set<string>>();
+  private pendingMetadata = new Map<string, Promise<TorrentFileInfo[]>>();
 
   private ensureClient(): WebTorrent {
     if (!this.client) {
@@ -84,6 +89,23 @@ export class TorrentEngine {
     this.torrents.set(id, torrent);
 
     torrent.on("metadata", () => {
+      const deselected = this.deselectedFiles.get(id);
+      if (deselected && torrent.files) {
+        // Deselect unwanted files
+        for (const f of torrent.files) {
+          if (deselected.has(f.path)) {
+            f.deselect();
+          }
+        }
+        // WebTorrent's file.deselect() drops shared pieces. We must re-select 
+        // the files we DO want to ensure shared pieces are restored to the download pool.
+        for (const f of torrent.files) {
+          if (!deselected.has(f.path)) {
+            f.select();
+          }
+        }
+      }
+
       handlers.onMetadata?.({
         name: torrent.name,
         total: torrent.length,
@@ -98,10 +120,7 @@ export class TorrentEngine {
     });
     torrent.on("error", (err: unknown) => {
       handlers.onError?.(message(err));
-      this.torrents.delete(id);
-      try {
-        torrent.destroy();
-      } catch {}
+      this.remove(id);
     });
   }
 
@@ -126,9 +145,126 @@ export class TorrentEngine {
     };
   }
 
+  getFiles(id: string): TorrentFileInfo[] | null {
+    const t = this.torrents.get(id);
+    if (!t || !t.files) return null;
+    const deselected = this.deselectedFiles.get(id) || new Set<string>();
+    return t.files.map((f) => ({
+      path: f.path,
+      length: f.length,
+      downloaded: f.downloaded,
+      selected: !deselected.has(f.path),
+    }));
+  }
+
+  async fetchMetadata(id: string, magnet: string): Promise<TorrentFileInfo[]> {
+    // Check if it's already active
+    const existing = this.torrents.get(id);
+    if (existing && existing.files) {
+      return this.getFiles(id)!;
+    }
+
+    if (this.pendingMetadata.has(id)) {
+      return this.pendingMetadata.get(id)!;
+    }
+
+    const promise = new Promise<TorrentFileInfo[]>((resolve, reject) => {
+      const client = this.ensureClient();
+      const t = client.add(magnet, { destroyStoreOnDestroy: true } as any, (t) => {
+        if (t.torrentFile) {
+          void saveTorrentMeta(id, t.torrentFile);
+        }
+        const files = t.files.map((f) => ({
+          path: f.path,
+          length: f.length,
+          downloaded: 0,
+          selected: true,
+        }));
+        t.destroy();
+        this.pendingMetadata.delete(id);
+        resolve(files);
+      });
+      t.on("error", (err) => {
+        t.destroy();
+        this.pendingMetadata.delete(id);
+        reject(err);
+      });
+    });
+
+    this.pendingMetadata.set(id, promise);
+    return promise;
+  }
+
+  isDeselected(id: string, path: string): boolean {
+    const deselected = this.deselectedFiles.get(id);
+    return deselected ? deselected.has(path) : false;
+  }
+
+  toggleFileSelection(id: string, path: string, selected: boolean): void {
+    let deselected = this.deselectedFiles.get(id);
+    if (!deselected) {
+      deselected = new Set<string>();
+      this.deselectedFiles.set(id, deselected);
+    }
+
+    if (selected) {
+      deselected.delete(path);
+    } else {
+      deselected.add(path);
+    }
+
+    const t = this.torrents.get(id);
+    if (t && t.files) {
+      const file = t.files.find((f) => f.path === path);
+      if (file) {
+        if (selected) {
+          file.select();
+        } else {
+          file.deselect();
+          // Restore any shared pieces that WebTorrent just dropped
+          for (const f of t.files) {
+            if (!deselected.has(f.path)) {
+              f.select();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  async stream(id: string, targetPath?: string): Promise<string | null> {
+    const t = this.torrents.get(id);
+    if (!t || !t.files || t.files.length === 0) return null;
+
+    if (!this.server) {
+      this.server = this.client!.createServer();
+      await new Promise<void>((resolve) => {
+        this.server.listen(0, resolve);
+      });
+    }
+
+    const port = this.server.address().port;
+    
+    let targetFile = targetPath ? t.files.find(f => f.path === targetPath) : undefined;
+    if (!targetFile) {
+      targetFile = t.files[0]!;
+      t.files.forEach((f) => {
+        if (f.name.match(/\.(mp4|mkv|avi|webm)$/i)) {
+          if (!targetFile!.name.match(/\.(mp4|mkv|avi|webm)$/i) || f.length > targetFile!.length) {
+            targetFile = f;
+          }
+        }
+      });
+    }
+
+    const filePath = targetFile.path.replace(/\\/g, '/');
+    return `http://localhost:${port}/webtorrent/${t.infoHash}/${encodeURI(filePath)}`;
+  }
+
   remove(id: string): void {
     const t = this.torrents.get(id);
     this.torrents.delete(id);
+    this.deselectedFiles.delete(id);
     if (t) {
       try {
         t.destroy();
@@ -137,6 +273,12 @@ export class TorrentEngine {
   }
 
   destroy(): void {
+    if (this.server) {
+      try {
+        this.server.close();
+      } catch {}
+      this.server = null;
+    }
     this.torrents.clear();
     // Never block shutdown on webtorrent's async teardown: hand off the client
     // destroy to a later tick and let the OS reclaim sockets if we exit first.

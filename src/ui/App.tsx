@@ -11,6 +11,7 @@ import { parseInput } from "../sources/magnet";
 import { magnetFromTorrentFile } from "../sources/torrentFile";
 import { readClipboard, writeClipboard } from "../util/clipboard";
 import { openFolder } from "../util/openFolder";
+import { openStream } from "../util/openStream";
 import { cleanText, formatBytes, truncate } from "../util/format";
 import {
   StoreContext,
@@ -32,6 +33,7 @@ import { Downloads } from "./components/Downloads";
 import { Seeding } from "./components/Seeding";
 import { Spinner } from "./components/Spinner";
 import { TabTitle } from "./components/TabTitle";
+import { Files } from "./components/Files";
 import { Splash } from "./views/Splash";
 import { FolderPrompt } from "./components/FolderPrompt";
 import { TrackersPrompt } from "./components/TrackersPrompt";
@@ -98,6 +100,15 @@ export function App({
   } | null>(null);
   const [lastDownloadToDir, setLastDownloadToDir] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [inspectingId, setInspectingIdState] = useState<string | null>(null);
+  const [inspectingMagnet, setInspectingMagnet] = useState<string | null>(null);
+  const [inspectFocusSelected, setInspectFocusSelected] = useState<boolean>(true);
+  
+  const setInspectingId = useCallback((id: string | null, magnet?: string) => {
+    setInspectingIdState(id);
+    setInspectingMagnet(magnet ?? null);
+  }, []);
+  
   const booting = useRef(false);
 
   useEffect(() => {
@@ -322,6 +333,31 @@ export function App({
     [queue],
   );
 
+  const streamDownload = useCallback(
+    (id: string) => {
+      if (!queue) return;
+      void (async () => {
+        setNotice("Starting local stream server...");
+        const url = await queue.stream(id);
+        if (url) {
+          const ok = await openStream(url);
+          if (ok) setNotice("Launched media player.");
+          else setNotice(`Could not launch player. Stream running at: ${url}`);
+        } else {
+          setNotice("Stream not available. Waiting for metadata or files...");
+        }
+      })();
+    },
+    [queue]
+  );
+
+  const toggleFileSelection = useCallback(
+    (id: string, path: string, selected: boolean) => {
+      queue?.toggleFileSelection(id, path, selected);
+    },
+    [queue]
+  );
+
   const submitQuery = useCallback(
     (raw: string) => {
       const q = raw.trim();
@@ -405,8 +441,15 @@ export function App({
       copyMagnet,
       openDownloadFolder,
       exportTorrent,
+      streamDownload,
       notice,
       setNotice,
+      inspectingId,
+      inspectingMagnet,
+      setInspectingId,
+      inspectFocusSelected,
+      setInspectFocusSelected,
+      toggleFileSelection,
       quitAll,
       listRows,
       compact,
@@ -434,7 +477,11 @@ export function App({
     copyMagnet,
     openDownloadFolder,
     exportTorrent,
+    streamDownload,
     notice,
+    inspectingId,
+    inspectingMagnet,
+    toggleFileSelection,
     listRows,
     compact,
     contentWidth,
@@ -488,6 +535,10 @@ export function App({
       }
       if (key.escape) {
         if (captureMode === "esc") return;
+        if (inspectingId) {
+          setInspectingId(null);
+          return;
+        }
         if (region === "content") {
           setRegion("sidebar");
           return;
@@ -584,7 +635,9 @@ export function App({
         >
           <Sidebar />
           <Box flexGrow={1} flexDirection="column">
-            {section === "downloads" ? (
+            {inspectingId ? (
+              <Files />
+            ) : section === "downloads" ? (
               <Downloads />
             ) : section === "seeding" ? (
               <Seeding />
@@ -596,7 +649,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, downloadFocus, seedFocus)} />
+            <Footer hints={footerHints(region, section, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected)} />
           </Box>
         ) : null}
       </Box>

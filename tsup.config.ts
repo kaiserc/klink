@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.tsx"],
   format: ["esm"],
-  target: "node22",
+  target: "node26",
   platform: "node",
   banner: { js: "#!/usr/bin/env node" },
   clean: true,

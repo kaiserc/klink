@@ -4,6 +4,13 @@ export type DownloadStatus = "downloading" | "paused" | "completed" | "failed";
 
 export type SeedStatus = "seeding" | "paused" | "missing";
 
+export interface TorrentFileInfo {
+  path: string;
+  length: number;
+  downloaded: number;
+  selected: boolean;
+}
+
 export interface SeedItem {
   id: string;
   name: string;

@@ -5,22 +5,23 @@ export type CliCommand =
   | { kind: "help" }
   | { kind: "run"; initialMagnet?: string; initialTorrent?: string }
   | { kind: "watch"; dir: string; downloadDir?: string }
+  | { kind: "serve"; port?: number; host?: string; token?: string; downloadDir?: string }
   | { kind: "invalid"; arg: string };
 
-// `--to <dir>` (alias `--dir`) overrides where finished files land, for the
-// headless subcommands; returns the value and the remaining args.
-function takeToFlag(rest: string[]): { downloadDir?: string; rest: string[] } {
-  const out: string[] = [];
-  let downloadDir: string | undefined;
-  for (let i = 0; i < rest.length; i++) {
-    const arg = rest[i]!;
-    if ((arg === "--to" || arg === "--dir") && i + 1 < rest.length) {
-      downloadDir = rest[++i];
+// Minimal `--flag value` reader for the headless subcommands. Unknown tokens are
+// left in `rest` so the caller can decide what to do with them.
+function readFlags(args: string[]): { flags: Record<string, string>; rest: string[] } {
+  const flags: Record<string, string> = {};
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg.startsWith("--") && i + 1 < args.length) {
+      flags[arg.slice(2)] = args[++i]!;
     } else {
-      out.push(arg);
+      rest.push(arg);
     }
   }
-  return { downloadDir, rest: out };
+  return { flags, rest };
 }
 
 export function parseCliArgs(argv: string[]): CliCommand {
@@ -30,10 +31,21 @@ export function parseCliArgs(argv: string[]): CliCommand {
   if (a === "--version" || a === "-v") return { kind: "version" };
   if (a === "--help" || a === "-h") return { kind: "help" };
   if (a === "watch") {
-    const { downloadDir, rest } = takeToFlag(args.slice(1));
+    const { flags, rest } = readFlags(args.slice(1));
     const dir = rest[0];
     if (!dir) return { kind: "invalid", arg: "watch (missing directory)" };
-    return { kind: "watch", dir, downloadDir };
+    return { kind: "watch", dir, downloadDir: flags.to ?? flags.dir };
+  }
+  if (a === "serve") {
+    const { flags } = readFlags(args.slice(1));
+    const portNum = flags.port ? Number.parseInt(flags.port, 10) : undefined;
+    return {
+      kind: "serve",
+      port: portNum && Number.isFinite(portNum) && portNum > 0 ? portNum : undefined,
+      host: flags.host,
+      token: flags.token,
+      downloadDir: flags.to ?? flags.dir,
+    };
   }
   if (/^magnet:\?/i.test(a)) return { kind: "run", initialMagnet: a };
   if (isInfoHash(a)) return { kind: "run", initialMagnet: a };
@@ -48,6 +60,7 @@ usage
   torlnk "magnet:?xt=..."     start a download on launch
   torlnk path/to/file.torrent open a .torrent file on launch
   torlnk watch <dir>          headless: download torrents dropped into <dir>
+  torlnk serve                headless: HTTP add API (POST /add) on :9161
   torlnk --version            print the version
 
 once open: type to search every source at once, enter to run, arrows to move,
@@ -57,4 +70,12 @@ tip: quote magnet links (they contain & characters)
 watch mode (no TUI): drop a .torrent, or a .magnet/.txt holding a magnet or
 info hash, into <dir> and it downloads then seeds. Add --to <dir> to choose
 where files land. Handled files move to <dir>/.processed (or /.failed).
+
+serve mode (no TUI): a small HTTP API for handing torlink a magnet.
+  POST /add {"magnet":"..."}   queue a magnet or info hash
+  GET  /downloads              list active downloads and seeds
+  GET  /health                 liveness (no auth)
+flags: --port <n> (default 9161), --host <addr> (default 127.0.0.1),
+--token <secret> (required to bind a public --host; or TORLINK_API_TOKEN),
+--to <dir> (where files land).
 `;

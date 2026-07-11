@@ -43,11 +43,22 @@ A short, hand-picked list of trusted sources:
 | Category | Sources |
 | --- | --- |
 | Games | FitGirl |
-| Movies | YTS, The Pirate Bay, 1337x |
-| TV | EZTV, The Pirate Bay, 1337x |
+| Movies | YTS, The Pirate Bay, 1337x, BitTorrented |
+| TV | EZTV, The Pirate Bay, 1337x, BitTorrented |
 | Anime | Nyaa, SubsPlease |
 
 Games are the only category that can run code, so they come from FitGirl alone, a repacker with a long, trusted track record; everything else is plain video and subtitles. If a source is down, the search carries on without it, and torlink tells you which one is offline.
+
+## Headless
+
+torlink also runs without the TUI, for servers and seedboxes:
+
+    torlnk watch <dir>    download anything dropped into a folder
+    torlnk serve          take magnets over HTTP
+    torlnk files          stream finished downloads over HTTP
+    torlnk attach         keep the TUI alive across ssh sessions
+
+Add `--daemon` to keep watch, serve, or files running after you log out; `torlnk --help` has the full list of modes and flags.
 
 ## Contributing
 

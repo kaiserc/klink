@@ -11,7 +11,7 @@
 
 buildNpmPackage (finalAttrs: {
   pname = "torlink";
-  version = "1.3.1";
+  version = "1.4.0";
   __structuredAttrs = true;
   strictDeps = true;
 
@@ -19,7 +19,7 @@ buildNpmPackage (finalAttrs: {
     owner = "baairon";
     repo = "torlink";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-XMwJ1nVVcwXOhj3moqBMRngOAnAfbOuICHMAYQheeWA=";
+    hash = "sha256-KeszeV9atSvaA9s7iDCl+Q1eDMSx7flnQuBE8t49IPY=";
   };
 
   nodejs = nodejs_26;

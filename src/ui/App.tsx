@@ -23,7 +23,6 @@ import {
   type View,
 } from "./store";
 import { Logo } from "./components/Logo";
-import { UpdateBanner } from "./components/UpdateBanner";
 import { Sidebar, RAIL_WIDTH } from "./components/Sidebar";
 import { Rule } from "./components/Rule";
 import { Footer } from "./components/Footer";
@@ -545,8 +544,7 @@ export function App({
         <Box justifyContent="space-between">
           {/* The wordmark never shrinks: without these constraints a long notice
               squeezes the logo box and wraps its own text through the art. */}
-          <Box flexShrink={0} flexDirection="column">
-            <UpdateBanner latest={updateVersion} />
+          <Box flexShrink={0}>
             <Logo />
           </Box>
           {notice ? (

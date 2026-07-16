@@ -60,24 +60,42 @@ export function listRunDescriptors(dir: string = logsDir): RunDescriptor[] {
 
 const realSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+export interface RestartResult {
+  newPid: number | null; // pid of the relaunched daemon, when one was spawned
+  stillRunning: boolean; // the old process outlived the grace; nothing spawned
+}
+
 // Stop a running daemon and start it again from its recorded command so it comes
-// back on the freshly built code. Returns the new pid, or null if it wasn't
-// running (nothing to restart). Waits for the old process to exit first so the
-// two never fight over the same state files.
+// back on the freshly built code. Waits for the old process to exit first, and
+// if it outlives the grace (tearing down a client that seeds many torrents can
+// take a while) reports stillRunning instead of spawning: two daemons must never
+// contend for the same ports and state files.
 export async function restartDaemon(
   desc: RunDescriptor,
-  opts: { sleep?: (ms: number) => Promise<void>; waitMs?: number } = {},
-): Promise<number | null> {
+  opts: {
+    sleep?: (ms: number) => Promise<void>;
+    waitMs?: number;
+    graceMs?: number;
+    isAliveImpl?: (pid: number) => boolean;
+    killImpl?: (pid: number, signal: NodeJS.Signals) => void;
+    spawnImpl?: (name: string, argv: string[], cwd: string) => number;
+  } = {},
+): Promise<RestartResult> {
   const sleep = opts.sleep ?? realSleep;
   const waitMs = opts.waitMs ?? 100;
-  if (!isAlive(desc.pid)) return null;
+  const graceMs = opts.graceMs ?? 10_000;
+  const alive = opts.isAliveImpl ?? isAlive;
+  const kill = opts.killImpl ?? ((pid, signal) => process.kill(pid, signal));
+  const spawnFn = opts.spawnImpl ?? spawnDaemon;
+  if (!alive(desc.pid)) return { newPid: null, stillRunning: false };
 
   try {
-    process.kill(desc.pid, "SIGTERM");
+    kill(desc.pid, "SIGTERM");
   } catch {
     // Already gone between the check and the signal; fine, we'll re-spawn.
   }
-  for (let i = 0; i < 20 && isAlive(desc.pid); i++) await sleep(waitMs);
+  for (let waited = 0; waited < graceMs && alive(desc.pid); waited += waitMs) await sleep(waitMs);
+  if (alive(desc.pid)) return { newPid: null, stillRunning: true };
 
-  return spawnDaemon(desc.name, desc.argv, desc.cwd);
+  return { newPid: spawnFn(desc.name, desc.argv, desc.cwd), stillRunning: false };
 }

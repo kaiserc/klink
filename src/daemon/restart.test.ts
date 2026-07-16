@@ -44,14 +44,46 @@ describe("listRunDescriptors", () => {
 });
 
 describe("restartDaemon", () => {
-  it("returns null when the recorded process is already gone", async () => {
-    const dead: RunDescriptor = {
-      name: "watch",
-      pid: 2 ** 30,
-      argv: ["a", "watch", "/srv"],
-      cwd: "/srv",
-      startedAt: 0,
-    };
-    expect(await restartDaemon(dead)).toBeNull();
+  const desc = (pid: number): RunDescriptor => ({
+    name: "watch",
+    pid,
+    argv: ["a", "watch", "/srv"],
+    cwd: "/srv",
+    startedAt: 0,
+  });
+
+  it("spawns nothing when the recorded process is already gone", async () => {
+    expect(await restartDaemon(desc(2 ** 30))).toEqual({ newPid: null, stillRunning: false });
+  });
+
+  it("reports stillRunning instead of spawning when the old pid outlives the grace", async () => {
+    const killed: Array<[number, string]> = [];
+    const res = await restartDaemon(desc(4242), {
+      sleep: async () => {},
+      waitMs: 100,
+      graceMs: 500,
+      isAliveImpl: () => true, // never dies
+      killImpl: (pid, signal) => killed.push([pid, signal]),
+    });
+    expect(res).toEqual({ newPid: null, stillRunning: true });
+    expect(killed).toEqual([[4242, "SIGTERM"]]);
+  });
+
+  it("waits out a slow shutdown and then relaunches", async () => {
+    let aliveChecks = 0;
+    const spawned: string[] = [];
+    const res = await restartDaemon(desc(4242), {
+      sleep: async () => {},
+      waitMs: 100,
+      graceMs: 10_000,
+      isAliveImpl: () => ++aliveChecks < 5, // dies on the 5th check
+      killImpl: () => {},
+      spawnImpl: (name) => {
+        spawned.push(name);
+        return 5151;
+      },
+    });
+    expect(res).toEqual({ newPid: 5151, stillRunning: false });
+    expect(spawned).toEqual(["watch"]);
   });
 });

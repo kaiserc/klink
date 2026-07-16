@@ -34,6 +34,27 @@ describe("fetchLatestVersion", () => {
     const v = await fetchLatestVersion({ fetchImpl: async () => okResponse("1.5.0") });
     expect(v).toBe("1.5.0");
   });
+  it("builds the registry URL from the manifest name, not a hardcoded slug", async () => {
+    const urls: string[] = [];
+    await fetchLatestVersion({
+      packageName: "@scope/other-pkg",
+      fetchImpl: async (url) => {
+        urls.push(url);
+        return okResponse("9.9.9");
+      },
+    });
+    expect(urls).toEqual(["https://registry.npmjs.org/%40scope%2Fother-pkg/latest"]);
+  });
+  it("defaults the package name to this repo's own manifest", async () => {
+    const urls: string[] = [];
+    await fetchLatestVersion({
+      fetchImpl: async (url) => {
+        urls.push(url);
+        return okResponse("9.9.9");
+      },
+    });
+    expect(urls).toEqual(["https://registry.npmjs.org/torlnk/latest"]);
+  });
   it("returns null on a non-ok response", async () => {
     const v = await fetchLatestVersion({
       fetchImpl: async () => ({ ok: false, status: 404 }) as unknown as Response,

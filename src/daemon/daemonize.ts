@@ -27,6 +27,9 @@ export function runPathFor(name: string): string {
   return path.join(logsDir, `${name}.run.json`);
 }
 
+// Records argv and cwd only, not env: a daemon relaunched after an update
+// inherits the updater's environment, so env-dependent behavior (proxies,
+// TORLINK_* overrides) follows the shell that ran `torlnk update`.
 export interface RunDescriptor {
   name: string;
   pid: number;

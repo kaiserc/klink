@@ -477,26 +477,31 @@ export function Results() {
             </>
           )}
         </Panel>
-        {(mode === "filter" || textFilter.trim()) && (
-          <Box marginLeft={1}>
-            <Text color={COLOR.accent}>{`Filter ${ICON.pointer} `}</Text>
-            <Box flexGrow={1} minWidth={0}>
-              {mode === "filter" ? (
-                <TextField
-                  defaultValue={textFilter}
-                  width={Math.max(1, contentWidth - 10)}
-                  onChange={setTextFilter}
-                  onSubmit={() => { setTextFilter(textFilter.trim()); setMode("list"); }}
-                  onExitDown={() => { setTextFilter(textFilter.trim()); setMode("list"); }}
-                  onExitLeft={() => { setTextFilter(textFilter.trim()); setMode("list"); }}
-                />
-              ) : (
-                <Text wrap="truncate-end">{textFilter}</Text>
-              )}
-            </Box>
-          </Box>
-        )}
       </Box>
+      {(mode === "filter" || textFilter.trim()) && (
+        <Box width={contentWidth} paddingLeft={1}>
+          <Box flexShrink={0}>
+            <Text color={COLOR.accent}>{`Filter ${ICON.pointer} `}</Text>
+          </Box>
+          <Box flexGrow={1} minWidth={0}>
+            {mode === "filter" ? (
+              <TextField
+                defaultValue={textFilter}
+                width={Math.max(1, contentWidth - 10)}
+                onChange={setTextFilter}
+                // Commit from the submit value / functional form, not the
+                // render closure: a same-tick burst (ctrl+u then enter) would
+                // otherwise resurrect the pre-clear text.
+                onSubmit={(value) => { setTextFilter(value.trim()); setMode("list"); }}
+                onExitDown={() => { setTextFilter((cur) => cur.trim()); setMode("list"); }}
+                onExitLeft={() => { setTextFilter((cur) => cur.trim()); setMode("list"); }}
+              />
+            ) : (
+              <Text wrap="truncate-end">{textFilter}</Text>
+            )}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

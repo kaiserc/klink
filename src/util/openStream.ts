@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
 
 function launchDetached(cmd: string, args: string[]): Promise<boolean> {
   return new Promise((resolve) => {
@@ -46,16 +45,28 @@ export async function openStream(url: string): Promise<boolean> {
   
   let playlistPath: string | null = null;
   try {
-    playlistPath = join(tmpdir(), `torlink_stream_${randomBytes(4).toString("hex")}.m3u`);
+    playlistPath = join(tmpdir(), `klink_stream_${randomBytes(4).toString("hex")}.m3u`);
     writeFileSync(playlistPath, `#EXTM3U\n${url}\n`, "utf8");
-  } catch (e) {
+  } catch {
     // Ignore if we can't create the playlist
   }
 
   const targetUrl = playlistPath || url;
 
+  const cleanup = () => {
+    if (playlistPath) {
+      setTimeout(() => {
+        try {
+          if (playlistPath && existsSync(playlistPath)) {
+            unlinkSync(playlistPath);
+          }
+        } catch {}
+      }, 30_000);
+    }
+  };
+
   if (process.platform === "win32") {
-    if (await launchDetached("vlc", [targetUrl])) return true;
+    if (await launchDetached("vlc", [targetUrl])) { cleanup(); return true; }
     
     // Check common VLC installation paths if it's not in PATH
     const vlcPaths = [
@@ -64,24 +75,30 @@ export async function openStream(url: string): Promise<boolean> {
     ];
     for (const vlcPath of vlcPaths) {
       if (existsSync(vlcPath)) {
-        if (await launchDetached(vlcPath, [targetUrl])) return true;
+        if (await launchDetached(vlcPath, [targetUrl])) { cleanup(); return true; }
       }
     }
 
-    if (await launchDetached("mpv", [targetUrl])) return true;
+    if (await launchDetached("mpv", [targetUrl])) { cleanup(); return true; }
     
     // Fallback to explorer, which will open the default media player for the .m3u file
-    return launchDetached("explorer", [targetUrl]);
+    const res = await launchDetached("explorer", [targetUrl]);
+    cleanup();
+    return res;
   }
   
   if (process.platform === "darwin") {
-    if (await launchDetached("vlc", [targetUrl])) return true;
-    if (await launchDetached("mpv", [targetUrl])) return true;
-    return launchDetached("open", [targetUrl]);
+    if (await launchDetached("vlc", [targetUrl])) { cleanup(); return true; }
+    if (await launchDetached("mpv", [targetUrl])) { cleanup(); return true; }
+    const res = await launchDetached("open", [targetUrl]);
+    cleanup();
+    return res;
   }
   
   for (const [cmd, args] of LINUX_PLAYERS) {
-    if (await launchDetached(cmd, [...args, targetUrl])) return true;
+    if (await launchDetached(cmd, [...args, targetUrl])) { cleanup(); return true; }
   }
+  cleanup();
   return false;
 }
+

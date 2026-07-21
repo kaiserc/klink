@@ -175,12 +175,11 @@ export function makeTestStore(overrides: Partial<Store> = {}): Store {
     inspectingPeersId: null,
     setInspectingPeersId: noop,
     inspectingMagnet: null,
-    setInspectingMagnet: noop,
-    throttleEnabled: false,
+    inspectFocusSelected: false,
+    setInspectFocusSelected: noop,
+    toggleFileSelection: noop,
     toggleThrottle: noop,
     requestConfirm: (_msg, cb) => cb(),
-    confirmPrompt: null,
-    clearConfirm: noop,
     ...overrides,
   };
 }

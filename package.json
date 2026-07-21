@@ -59,21 +59,21 @@
   },
   "dependencies": {
     "env-paths": "^4.0.0",
-    "ink": "^7.0.5",
+    "ink": "^7.1.1",
     "parse-torrent": "^11.0.21",
-    "react": "^19.2.7",
+    "react": "^19.2.8",
     "serve-handler": "^6.1.7",
-    "webtorrent": "^2.4.1"
+    "webtorrent": "^3.0.16"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/serve-handler": "^6.1.4",
     "ink-testing-library": "^4.0.0",
     "tsup": "^8.5.1",
-    "tsx": "^4.23.0",
+    "tsx": "^4.23.1",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "bufferutil@4.1.0": true,

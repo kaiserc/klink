@@ -17,15 +17,16 @@ Finding a torrent these days sucks. One site is a minefield of fake download but
 Klink expands on upstream torlink with key power-user features:
 
 - 🔒 **Klink branding**: Renamed from torlink with an 8-bit padlock identity and multi-colour terminal logo (silver shackle, gold body, red K, purple gradient wordmark).
-- 🔍 **Peer Inspector Pane**: Press `b` on an active download to view live swarm peer connections, IP addresses, client software strings, and individual peer transfer rates.
+- 🎬 **Cinemeta & IMDb Metadata**: Automatically parses video release names into title, year, season, and episode, fetching rich plot summaries, IMDb ratings, genres, directors, and cast members.
+- 🔍 **Peer Inspector Pane**: Press `w` on an active download to view live swarm peer connections, IP addresses, client software strings, and individual peer transfer rates.
 - 🐢 **Turtle Mode (Bandwidth Throttling)**: Toggle global download and upload speed limits on the fly with a single keypress (`b`) for low-bandwidth or shared network environments.
-- 📁 **File Inspection & Selective Download**: Inspect multi-file torrent contents before or during download, view nested file trees, and toggle individual files on or off.
-- ℹ️ **Metadata Inspector**: View detailed metadata (like plot summaries, tracklists, or release notes) for a torrent before downloading.
+- 📁 **File Inspection & Selective Download**: Press `i` to inspect multi-file torrent contents before or during download, view nested file trees, and toggle individual files on or off with `space`.
+- ℹ️ **Metadata Inspector**: Press `v` to view detailed torrent metadata (comments, creation date, piece count/size, trackers) for any search result or download.
 - 📻 **RSS Auto-Downloader**: A background daemon for subscribing to RSS feeds and automatically downloading new items as they are released.
 - ⚙️ **Advanced Search Filtering**: Filter and refine search results by properties like seeders, size, and category.
-- ⏯️ **Sequential Downloading**: Toggle sequential block downloading to prioritise early pieces, enabling immediate playback of media.
-- 🌐 **Network Interface Binding**: Force all torrent traffic through a specific network interface (like a VPN tunnel) to prevent IP leaks.
-- 🎬 **Direct Media Streaming & Themed Web UI**: Stream video files directly over HTTP while downloading (`klink serve` / `klink files`), with an integrated web interface featuring a dark/light theme switcher.
+- ⏯️ **Sequential Downloading**: Toggle sequential block downloading (`shift+s`) to prioritise early pieces, enabling immediate playback of media.
+- 🌐 **Network Interface Binding**: Force all torrent traffic through a specific network interface (`n`) (like a VPN tunnel) to prevent IP leaks.
+- 🎥 **Direct Media Streaming & Themed Web UI**: Stream video files directly over HTTP while downloading (`klink serve` / `klink files`), with an integrated web interface featuring a dark/light theme switcher.
 - ✅ **Completed Tab & Smart File Organisation**: Cleanly separate active downloads, seeding items, and finished downloads with directory routing.
 - ⚠️ **Action Confirmation Dialogs**: Safety confirmation prompts before destructive actions like cancelling downloads or clearing history to prevent accidental data loss.
 - 📥 **Drag-and-Drop & Clipboard `.torrent` Support**: Drop a `.torrent` file directly onto the terminal or paste its path/URI into the search bar to enqueue it instantly.
@@ -82,6 +83,7 @@ Games are the only category that can run code, so they come from FitGirl alone, 
 
 Klink also runs without the TUI, for servers and seedboxes:
 
+    klink search <query> print search results as JSON
     klink watch <dir>    download anything dropped into a folder
     klink serve          take magnets over HTTP and host themed web player
     klink files          stream finished downloads over HTTP
@@ -121,15 +123,17 @@ Before opening a PR, skim [CONTRIBUTING.md](CONTRIBUTING.md); it lays out the ba
 | --- | --- | --- |
 | Name / branding | torlink | **Klink** with 8-bit padlock logo |
 | Node.js requirement | ≥ 18 | **≥ 26** |
-| Peer Inspector | ❌ | ✅ |
-| Turtle Mode | ❌ | ✅ |
-| File Inspection | ❌ | ✅ |
-| Metadata Inspector | ❌ | ✅ |
+| Cinemeta & IMDb Enrichment | ❌ | ✅ |
+| Peer Inspector (`w`) | ❌ | ✅ |
+| Turtle Mode (`b`) | ❌ | ✅ |
+| File Inspection & Selection (`i` / `space`) | ❌ | ✅ |
+| Metadata Inspector (`v`) | ❌ | ✅ |
+| Headless JSON Search (`klink search`) | ❌ | ✅ |
 | RSS Auto-Downloader | ❌ | ✅ |
 | Advanced Search Filtering | ❌ | ✅ |
-| Sequential Downloading | ❌ | ✅ |
-| Network Interface Binding | ❌ | ✅ |
-| Media Streaming | ❌ | ✅ |
+| Sequential Downloading (`shift+s`) | ❌ | ✅ |
+| Network Interface Binding (`n`) | ❌ | ✅ |
+| Media Streaming & Web Player | ❌ | ✅ |
 | Completion Tab | ❌ | ✅ |
 | Confirmation Dialogs | ❌ | ✅ |
 | Expanded Categories (E-Books & Audiobooks) | ❌ | ✅ |

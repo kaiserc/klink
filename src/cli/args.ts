@@ -150,21 +150,21 @@ export function parseCliArgs(argv: string[]): CliCommand {
   return { kind: "invalid", arg: a };
 }
 
-export const HELP_TEXT = `torlink, terminal-native torrent search
+export const HELP_TEXT = `klink, terminal-native torrent search
 
 usage
-  torlnk                      open the search TUI
-  torlnk "magnet:?xt=..."     start a download on launch
-  torlnk path/to/file.torrent open a .torrent file on launch
-  torlnk search <query>        headless: print search results as JSON
+  klink                      open the search TUI
+  klink "magnet:?xt=..."     start a download on launch
+  klink path/to/file.torrent open a .torrent file on launch
+  klink search <query>        headless: print search results as JSON
     [--category games|movies|tv|anime|ebooks|audiobooks]
-  torlnk watch <dir>          headless: download torrents dropped into <dir>
-  torlnk serve                headless: HTTP add API (POST /add) on :9161
-  torlnk files                headless: serve downloads over HTTP on :9160
-  torlnk attach               open/reattach the TUI in a persistent tmux session
-  torlnk update [--force]     update to the latest release and restart any daemon
+  klink watch <dir>          headless: download torrents dropped into <dir>
+  klink serve                headless: HTTP add API (POST /add) on :9161
+  klink files                headless: serve downloads over HTTP on :9160
+  klink attach               open/reattach the TUI in a persistent tmux session
+  klink update [--force]     update to the latest release and restart any daemon
                               (--force rebuilds/restarts even if already current)
-  torlnk --version            print the version
+  klink --version            print the version
 
 once open: type to search every source at once, enter to run, arrows to move,
 d to download, ? for keys
@@ -181,11 +181,11 @@ after it finishes (e.g. 1h, 30m, 90s, 2d); files are kept by default. Add
 --daemon (watch/serve/files): background the process (own session, logs to a
 file), so you can log out and it keeps running. Prints the pid and log path.
 
-torlnk attach: run the TUI inside a persistent tmux session. Detach with
-tmux's ctrl-b d, log out, then torlnk attach again to reattach where you
+klink attach: run the TUI inside a persistent tmux session. Detach with
+tmux's ctrl-b d, log out, then klink attach again to reattach where you
 left off. Downloads and seeds keep running while detached.
 
-serve mode (no TUI): a small HTTP API for handing torlink a magnet.
+serve mode (no TUI): a small HTTP API for handing klink a magnet.
   POST /add {"magnet":"..."}   queue a magnet or info hash
   GET  /downloads              list active downloads and seeds
   GET  /health                 liveness (no auth)

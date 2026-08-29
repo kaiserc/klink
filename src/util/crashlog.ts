@@ -35,3 +35,19 @@ export function containUnhandledRejections(opts: { echo?: boolean } = {}): void 
     }
   });
 }
+
+// Node prints runtime warnings (deprecations, experimental features, memory leaks)
+// directly to stderr by default, which tears the alt-screen in TUI mode.
+// Removing default listeners and registering a custom listener catches these
+// warnings, logs them to crash.log, and prevents stderr corruption.
+export function containWarnings(opts: { echo?: boolean } = {}): void {
+  process.removeAllListeners("warning");
+  process.on("warning", (warning) => {
+    logCrash("warning", warning);
+    if (opts.echo) {
+      const msg = warning instanceof Error ? (warning.stack ?? warning.message) : String(warning);
+      console.error(`[torlnk] warning: ${msg}`);
+    }
+  });
+}
+

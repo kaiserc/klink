@@ -2,7 +2,7 @@ import { render } from "ink";
 import { parseCliArgs, HELP_TEXT } from "./cli/args";
 import { daemonize } from "./daemon/daemonize";
 import { runAttach } from "./daemon/attach";
-import { containUnhandledRejections, logCrash } from "./util/crashlog";
+import { containUnhandledRejections, containWarnings, logCrash } from "./util/crashlog";
 import { VERSION } from "./version";
 import { App } from "./ui/App";
 
@@ -24,18 +24,17 @@ if (cmd.kind === "invalid") {
   process.exit(1);
 }
 
-// An unhandled promise rejection must never take the whole app down: webtorrent
-// can produce one from inside its own async internals where no caller's
-// try/catch or error event can reach (see util/crashlog.ts). Contained and
-// logged for every mode; headless runs also echo one line to their log.
-containUnhandledRejections({
-  echo:
-    cmd.kind === "update" ||
-    cmd.kind === "search" ||
-    cmd.kind === "watch" ||
-    cmd.kind === "serve" ||
-    cmd.kind === "files",
-});
+const isHeadless =
+  cmd.kind === "update" ||
+  cmd.kind === "search" ||
+  cmd.kind === "watch" ||
+  cmd.kind === "serve" ||
+  cmd.kind === "files";
+
+// Contain unhandled rejections and Node warnings: neither should crash the app or
+// leak raw stderr output into the full-screen terminal TUI.
+containUnhandledRejections({ echo: isHeadless });
+containWarnings({ echo: isHeadless });
 
 // Run/reattach the TUI inside a persistent tmux session (execs tmux, then exits).
 if (cmd.kind === "attach") {
@@ -92,10 +91,10 @@ if (cmd.kind === "update") {
     .catch(failHeadless);
 } else {
 
-// Enter the alt-screen and hide the hardware cursor: the TUI draws its own
+// Enter the alt-screen, clear buffer, and hide the hardware cursor: the TUI draws its own
 // cursor (the search field block, list pointers), so the terminal's should
 // stay hidden. restoreTerminal shows it again on exit.
-process.stdout.write("\x1b[?1049h\x1b[?25l\x1b[22;0t\x1b]0;torlink\x07");
+process.stdout.write("\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l\x1b[22;0t\x1b]0;torlink\x07");
 if (process.platform === "win32") process.title = "torlink";
 
 let restored = false;

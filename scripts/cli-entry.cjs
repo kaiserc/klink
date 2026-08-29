@@ -12,6 +12,13 @@ if (major < 26) {
   process.exit(1);
 }
 
+// Remove Node's default stderr warning handler early so warnings during require/import
+// do not leak into the terminal TUI.
+process.removeAllListeners('warning');
+process.on('warning', function () {
+  // Silenced; full logging takes over once index.js loads
+});
+
 // Resolve webrtc-polyfill to an inert stub: simple-peer then reports
 // WEBRTC_SUPPORT = false and downloads run on TCP/uTP and DHT peers alone.
 // Returns false on Node 22.0 to 22.14, which has no module.registerHooks and

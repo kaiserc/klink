@@ -69,3 +69,35 @@ describe("containUnhandledRejections", () => {
     }
   });
 });
+
+describe("containWarnings", () => {
+  it("registers a warning listener, suppresses default stderr output, and logs to crash.log", async () => {
+    const { dir, crashlog } = await isolated();
+    const before = process.listeners("warning");
+    try {
+      crashlog.containWarnings();
+      const added = process
+        .listeners("warning")
+        .filter((l) => !before.includes(l));
+      expect(added).toHaveLength(1);
+
+      const handler = added[0]! as (warning: Error) => void;
+      const testWarning = new Error("Punycode module is deprecated");
+      testWarning.name = "DeprecationWarning";
+      expect(() => handler(testWarning)).not.toThrow();
+
+      const text = await fs.readFile(crashlog.crashLogFile, "utf8");
+      expect(text).toContain("[warning]");
+      expect(text).toContain("Punycode module is deprecated");
+    } finally {
+      for (const l of process.listeners("warning")) {
+        if (!before.includes(l)) process.removeListener("warning", l);
+      }
+      for (const l of before) {
+        process.on("warning", l as any);
+      }
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+

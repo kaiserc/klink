@@ -120,6 +120,8 @@ function makeStore(
     setInspectFocusSelected: noop,
     toggleFileSelection: noop,
     quitAll: noop,
+    autoClose: false,
+    toggleAutoClose: noop,
     listRows: 14,
     compact: false,
     contentWidth: CONTENT_WIDTH,

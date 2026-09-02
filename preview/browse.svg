@@ -50,13 +50,13 @@
     <text x="204.8" y="260" textLength="19.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#a78bfa">╭─</text>
     <text x="233.6" y="260" textLength="96" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#a78bfa" font-weight="600">Latest (5)</text>
     <text x="339.2" y="260" textLength="451.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#a78bfa">──────────────────────────────────────────────╮</text>
+    <text x="60.8" y="282" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">E-Books</text>
     <rect x="208.9" y="266" width="1.4" height="22" fill="#a78bfa"/>
     <text x="224" y="282" textLength="240" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">newest across all sources</text>
     <rect x="784.9" y="266" width="1.4" height="22" fill="#a78bfa"/>
-    <text x="60.8" y="304" textLength="86.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Downloads</text>
+    <text x="60.8" y="304" textLength="96" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Audiobooks</text>
     <rect x="208.9" y="288" width="1.4" height="22" fill="#a78bfa"/>
     <rect x="784.9" y="288" width="1.4" height="22" fill="#a78bfa"/>
-    <text x="60.8" y="326" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Seeding</text>
     <rect x="208.9" y="310" width="1.4" height="22" fill="#a78bfa"/>
     <text x="252.8" y="326" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55" font-weight="600">#</text>
     <text x="272" y="326" textLength="38.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55" font-weight="600">Name</text>
@@ -64,7 +64,7 @@
     <text x="646.4" y="326" textLength="76.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55" font-weight="600">Seed:Lch</text>
     <text x="742.4" y="326" textLength="28.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55" font-weight="600">Src</text>
     <rect x="784.9" y="310" width="1.4" height="22" fill="#a78bfa"/>
-    <text x="60.8" y="348" textLength="86.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Completed</text>
+    <text x="60.8" y="348" textLength="86.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Downloads</text>
     <rect x="208.9" y="332" width="1.4" height="22" fill="#a78bfa"/>
     <text x="224" y="348" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#a78bfa">❯</text>
     <text x="252.8" y="348" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">1</text>
@@ -73,6 +73,7 @@
     <text x="656" y="348" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#86d6a2">1240:88</text>
     <text x="742.4" y="348" textLength="28.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#86d6a2">YTS</text>
     <rect x="784.9" y="332" width="1.4" height="22" fill="#a78bfa"/>
+    <text x="60.8" y="370" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Seeding</text>
     <rect x="208.9" y="354" width="1.4" height="22" fill="#a78bfa"/>
     <text x="252.8" y="370" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">2</text>
     <text x="272" y="370" textLength="249.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Dune: Part Two (2024) [21…</text>
@@ -80,6 +81,7 @@
     <text x="665.6" y="370" textLength="57.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#86d6a2">910:41</text>
     <text x="742.4" y="370" textLength="28.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#86d6a2" fill-opacity="0.55">YTS</text>
     <rect x="784.9" y="354" width="1.4" height="22" fill="#a78bfa"/>
+    <text x="60.8" y="392" textLength="86.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Completed</text>
     <rect x="208.9" y="376" width="1.4" height="22" fill="#a78bfa"/>
     <text x="252.8" y="392" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">3</text>
     <text x="272" y="392" textLength="249.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Breaking Bad S05E14 1080p…</text>
@@ -108,15 +110,13 @@
     <text x="176" y="480" textLength="76.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Download</text>
     <text x="281.6" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">i</text>
     <text x="300.8" y="480" textLength="48" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Files</text>
-    <text x="377.6" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">y</text>
-    <text x="396.8" y="480" textLength="38.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Copy</text>
-    <text x="464" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">s</text>
-    <text x="483.2" y="480" textLength="38.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Sort</text>
-    <text x="550.4" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">/</text>
-    <text x="569.6" y="480" textLength="57.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Search</text>
-    <text x="656" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">f</text>
-    <text x="675.2" y="480" textLength="57.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Filter</text>
-    <text x="761.6" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">b</text>
-    <text x="780.8" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#ee7d92">…</text>
+    <text x="377.6" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">v</text>
+    <text x="396.8" y="480" textLength="76.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Metadata</text>
+    <text x="502.4" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">y</text>
+    <text x="521.6" y="480" textLength="38.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Copy</text>
+    <text x="588.8" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">s</text>
+    <text x="608" y="480" textLength="38.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Sort</text>
+    <text x="675.2" y="480" textLength="9.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#b9a7e6">/</text>
+    <text x="694.4" y="480" textLength="96" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill-opacity="0.55">Search   …</text>
   </g>
 </svg>

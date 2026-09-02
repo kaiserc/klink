@@ -173,4 +173,17 @@ describe("App Keyboard Shortcuts", () => {
     stdin.write("\x1b");
     await new Promise((r) => setTimeout(r, 50));
   });
+
+  it("handles the 'Q' shortcut to toggle auto-close mode", async () => {
+    const { stdin } = render(<App initialMagnet="magnet:?xt=urn:btih:1234567890123456789012345678901234567890" />);
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Press 'Q' to toggle auto-close on
+    stdin.write("Q");
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Press 'Q' again to toggle auto-close off
+    stdin.write("Q");
+    await new Promise((r) => setTimeout(r, 20));
+  });
 });

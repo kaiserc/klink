@@ -73,7 +73,6 @@ describe("apibay sentinel retry", () => {
     expect(askedUrl(0)).toContain("/precompiled/");
   });
 });
-
 // Field names and value shapes are verbatim from an apibay q.php response.
 const ROW = {
   id: "10944926",

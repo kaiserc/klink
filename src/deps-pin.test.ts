@@ -120,4 +120,3 @@ describe("node-datachannel prebuilt binaries", () => {
     }
   });
 });
-

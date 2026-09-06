@@ -155,4 +155,3 @@ export async function writeClipboard(text: string): Promise<boolean> {
   if (await writeNative(text)) return true;
   return writeOsc52(text);
 }
-

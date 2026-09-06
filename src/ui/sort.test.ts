@@ -174,4 +174,3 @@ describe("defaultOrder", () => {
     expect(ids(ordered)).toEqual(["dated", "undated"]);
   });
 });
-

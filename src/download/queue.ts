@@ -15,6 +15,7 @@ import {
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
 import { deleteSeedData } from "./delete-data";
 import { disarmBootMarker } from "./bootguard";
+import { trackersOf } from "../sources/magnet";
 import type {
   DownloadStatus,
   QueueItem,
@@ -196,7 +197,22 @@ export class DownloadQueue extends EventEmitter {
     if (item.name) migrateLegacyPathSync(item.dir, item.name, "Downloads");
     const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
     try {
-      this.engine.add(item.id, source, getDownloadsDir(item.dir), this.engineHandlers(item.id), this.trackers, item.strategy);
+      // Prefer the stored .torrent over the magnet, exactly as startSeeding
+      // does. A magnet carries no piece hashes, so the client cannot verify a
+      // single byte until the swarm serves it metadata, which is merely slow
+      // for a popular torrent and terminal for one that nobody else has yet.
+      // With the metadata on disk it verifies the local files immediately, so
+      // a re-add of something already downloaded, and a torrent created from
+      // local content, both go straight to complete instead of waiting on
+      // peers that may not exist.
+      const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
+      // The magnet's own trackers ride along regardless of which source won.
+      // A row merged from several sources carries all of their announce URLs
+      // (see mergeMagnetTrackers), and a stored .torrent only knows the list it
+      // shipped with, so passing them explicitly is what keeps that merge from
+      // being undone on resume. webtorrent dedupes announce internally.
+      const announce = [...(trackersOf(item.magnet) ?? []), ...this.trackers];
+      this.engine.add(item.id, source, getDownloadsDir(item.dir), this.engineHandlers(item.id), announce, item.strategy);
     } catch (e) {
       // engine.add routes webtorrent's own synchronous failures through
       // onError, so the only throw that reaches here is the client failing to

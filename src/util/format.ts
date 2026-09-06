@@ -41,7 +41,6 @@ export function parseUnixSeconds(value?: string): number | undefined {
   return Number.isFinite(ms) ? ms / 1000 : undefined;
 }
 
-
 export function formatBytesPerSec(bytes?: number): string {
   if (bytes === undefined || !Number.isFinite(bytes) || bytes <= 0) return "";
   const units = ["B/s", "KB/s", "MB/s", "GB/s"];

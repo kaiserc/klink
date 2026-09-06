@@ -28,6 +28,7 @@ const isHeadless =
   cmd.kind === "update" ||
   cmd.kind === "search" ||
   cmd.kind === "watch" ||
+  cmd.kind === "seed" ||
   cmd.kind === "serve" ||
   cmd.kind === "files";
 
@@ -58,6 +59,13 @@ if (cmd.kind === "update") {
   void import("./daemon/watch").then(({ runWatch }) =>
     runWatch(dir, downloadDir, { seedTimeMs, deleteFiles }).catch(failHeadless),
   );
+} else if (cmd.kind === "seed") {
+  if (cmd.daemon) daemonize("seed");
+  const { path: target, seedTimeMs, deleteFiles } = cmd;
+  void import("./daemon/seed")
+    .then(({ runSeed }) => runSeed(target, { seedTimeMs, deleteFiles }))
+    .then(() => process.exit(0))
+    .catch(failHeadless);
 } else if (cmd.kind === "serve") {
   if (cmd.daemon) daemonize("serve");
   const options = {
@@ -68,7 +76,10 @@ if (cmd.kind === "update") {
     seedTimeMs: cmd.seedTimeMs,
     deleteFiles: cmd.deleteFiles,
   };
-  void import("./daemon/serve").then(({ runServe }) => runServe(options).catch(failHeadless));
+  void import("./daemon/serve")
+    .then(({ runServe }) => runServe(options))
+    .then(() => process.exit(0))
+    .catch(failHeadless);
 } else if (cmd.kind === "files") {
   if (cmd.daemon) daemonize("files");
   const options = {

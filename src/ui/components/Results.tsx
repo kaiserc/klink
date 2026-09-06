@@ -530,8 +530,7 @@ export function Results() {
                           color={ss.color}
                           dimColor={!here}
                           bold={here}
-                        >
-                          {ss.tag}
+                        >{ss.tag}
                         </Text>
                       </Box>
                     </Box>

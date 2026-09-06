@@ -30,7 +30,10 @@ Klink expands on upstream torlink with key power-user features:
 - ✅ **Completed Tab & Smart File Organisation**: Cleanly separate active downloads, seeding items, and finished downloads with directory routing.
 - ⚠️ **Action Confirmation Dialogs**: Safety confirmation prompts before destructive actions like cancelling downloads or clearing history to prevent accidental data loss.
 - 📥 **Drag-and-Drop & Clipboard `.torrent` Support**: Drop a `.torrent` file directly onto the terminal or paste its path/URI into the search bar to enqueue it instantly.
-- 📡 **Private Tracker Announce Preservation**: Intact tracker list and passkey preservation when loading `.torrent` files.
+- 📡 **Private Tracker Announce Preservation**: Intact tracker list and passkey preservation when loading `.torrent` files or resuming downloads.
+- 🌱 **Local Seeding & Sharing (`klink seed`)**: Turn any local file or directory into a shared torrent, save the `.torrent` file, and seed immediately over DHT and trackers.
+- ⚡ **Headless CLI Search (`klink search`)**: Non-interactive command to query indexers and output JSON results directly from the terminal or scripts.
+- 📋 **OSC 52 Remote Clipboard**: Copy magnets and links over SSH sessions without requiring local X11 or Wayland clipboard forwarding.
 - ✨ **High-Contrast UI Row Highlights**: Full-row active bolding and dimming across all columns in Results, Downloads, and Seeding views.
 - 🔧 **WebTorrent stability patch**: Guards against a null-pointer crash in `_request` introduced in webtorrent 3.x, keeping the daemon stable under heavy peer churn.
 
@@ -83,13 +86,28 @@ Games are the only category that can run code, so they come from FitGirl alone, 
 
 Klink also runs without the TUI, for servers and seedboxes:
 
-    klink search <query> print search results as JSON
+    klink search "<query>" [--category games|movies|tv|anime|ebooks|audiobooks]
+                            print one JSON document of merged search results
+    klink seed <path>    share files you already have
     klink watch <dir>    download anything dropped into a folder
     klink serve          take magnets over HTTP and host themed web player
     klink files          stream finished downloads over HTTP
     klink attach         keep the TUI alive across ssh sessions
 
-Add `--daemon` to keep watch, serve, or files running after you log out; `klink --help` has the full list of modes and flags.
+Add `--daemon` to keep seed, watch, serve, or files running after you log out; `klink --help` has the full list of modes and flags.
+
+### Sharing something of your own
+
+Everything else starts with a torrent someone else made. `seed` goes the other way:
+
+    klink seed ./album
+
+It turns the folder into a torrent, saves `album.torrent` next to it, prints the magnet, and starts sharing right away. Send anyone the magnet and they pull the files from you.
+
+`serve` takes a `.torrent` as well as a magnet, so you can hand it one you already have:
+
+    POST /add {"magnet":"magnet:?xt=..."}
+    POST /add {"torrent":"<base64>"}
 
 ## Contributing
 

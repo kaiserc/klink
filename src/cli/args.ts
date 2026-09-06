@@ -25,6 +25,13 @@ export type CliCommand =
       deleteFiles?: boolean;
       daemon?: boolean;
     }
+  | {
+      kind: "seed";
+      path: string;
+      seedTimeMs?: number;
+      deleteFiles?: boolean;
+      daemon?: boolean;
+    }
   | { kind: "files"; port?: number; host?: string; token?: string; dir?: string; daemon?: boolean }
   | { kind: "attach" }
   | { kind: "update"; force?: boolean }
@@ -132,6 +139,19 @@ export function parseCliArgs(argv: string[]): CliCommand {
       daemon: bools.has("daemon"),
     };
   }
+  if (a === "seed") {
+    const { bools, rest: r0 } = splitBooleans(args.slice(1));
+    const { flags, rest } = readFlags(r0);
+    const target = rest[0];
+    if (!target) return { kind: "invalid", arg: "seed (missing path)" };
+    return {
+      kind: "seed",
+      path: target,
+      seedTimeMs: seedTimeFrom(flags["seed-time"]),
+      deleteFiles: bools.has("delete-files"),
+      daemon: bools.has("daemon"),
+    };
+  }
   if (a === "files") {
     const { bools, rest: r0 } = splitBooleans(args.slice(1));
     const { flags } = readFlags(r0);
@@ -158,6 +178,7 @@ usage
   klink path/to/file.torrent open a .torrent file on launch
   klink search <query>        headless: print search results as JSON
     [--category games|movies|tv|anime|ebooks|audiobooks]
+  klink seed <path>          headless: share files you already have
   klink watch <dir>          headless: download torrents dropped into <dir>
   klink serve                headless: HTTP add API (POST /add) on :9161
   klink files                headless: serve downloads over HTTP on :9160
@@ -174,7 +195,12 @@ watch mode (no TUI): drop a .torrent, or a .magnet/.txt holding a magnet or
 info hash, into <dir> and it downloads then seeds. Add --to <dir> to choose
 where files land. Handled files move to <dir>/.processed (or /.failed).
 
-seed mode (watch/serve): --seed-time <dur> stops seeding a torrent that long
+seed a path (no TUI): torlnk seed ./album turns the folder into a torrent,
+saves album.torrent next to it, prints the magnet, and starts sharing. Send
+anyone the magnet and they pull the files from you. Takes --seed-time,
+--delete-files and --daemon.
+
+seed expiry (seed/watch/serve): --seed-time <dur> stops seeding a torrent that long
 after it finishes (e.g. 1h, 30m, 90s, 2d); files are kept by default. Add
 --delete-files to also remove the downloaded data when the timer expires.
 
@@ -187,6 +213,7 @@ left off. Downloads and seeds keep running while detached.
 
 serve mode (no TUI): a small HTTP API for handing klink a magnet.
   POST /add {"magnet":"..."}   queue a magnet or info hash
+  POST /add {"torrent":"<b64>"} queue an uploaded .torrent (base64 or data: URI)
   GET  /downloads              list active downloads and seeds
   GET  /health                 liveness (no auth)
 flags: --port <n> (default 9161), --host <addr> (default 127.0.0.1),

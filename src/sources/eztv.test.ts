@@ -89,7 +89,6 @@ describe("toResult", () => {
     expect(toResult({ ...ROW, hash: "", magnet_url: "" })).toBeNull();
   });
 });
-
 describe("eztv search", () => {
   it("asks for one page and nothing else when the query is empty", async () => {
     respond(() => [JUDY]);

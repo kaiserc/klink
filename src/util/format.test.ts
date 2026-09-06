@@ -148,4 +148,3 @@ describe("parseUnixSeconds", () => {
     for (const a of added) for (const b of added) expect(Number.isNaN(cmp(a, b))).toBe(false);
   });
 });
-

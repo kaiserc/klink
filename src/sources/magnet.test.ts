@@ -157,4 +157,3 @@ describe("mergeMagnetTrackers", () => {
     expect(mergeMagnetTrackers(primary, ["nonsense", ""])).toBe(primary);
   });
 });
-

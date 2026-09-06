@@ -305,7 +305,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
     const themeSelect = document.getElementById('theme-select');
     
     // Load saved theme
-    const savedTheme = localStorage.getItem('torlnk-theme') || 'light';
+    const savedTheme = localStorage.getItem('klink-theme') || localStorage.getItem('torlnk-theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     themeSelect.value = savedTheme;
 
@@ -313,7 +313,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
     themeSelect.addEventListener('change', (e) => {
       const newTheme = e.target.value;
       document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('torlnk-theme', newTheme);
+      localStorage.setItem('klink-theme', newTheme);
     });
   </script>
 </body>

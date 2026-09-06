@@ -247,11 +247,22 @@ export function App({
           (item) => item.status === "downloading" || item.status === "queued"
         );
         if (!remaining) {
-          setNotice("All downloads completed · Closing app in 2s...");
-          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-          autoCloseTimerRef.current = setTimeout(() => {
-            quitAll();
-          }, 2000);
+          const anyFailed = queue.getItems().some(
+            (item) => item.status === "failed"
+          );
+          if (anyFailed) {
+            setNotice("Downloads finished with errors · Auto-close cancelled");
+            if (autoCloseTimerRef.current) {
+              clearTimeout(autoCloseTimerRef.current);
+              autoCloseTimerRef.current = null;
+            }
+          } else {
+            setNotice("All downloads completed · Closing app in 2s...");
+            if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = setTimeout(() => {
+              quitAll();
+            }, 2000);
+          }
         }
       }
     };

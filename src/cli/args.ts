@@ -195,7 +195,7 @@ watch mode (no TUI): drop a .torrent, or a .magnet/.txt holding a magnet or
 info hash, into <dir> and it downloads then seeds. Add --to <dir> to choose
 where files land. Handled files move to <dir>/.processed (or /.failed).
 
-seed a path (no TUI): torlnk seed ./album turns the folder into a torrent,
+seed a path (no TUI): klink seed ./album turns the folder into a torrent,
 saves album.torrent next to it, prints the magnet, and starts sharing. Send
 anyone the magnet and they pull the files from you. Takes --seed-time,
 --delete-files and --daemon.

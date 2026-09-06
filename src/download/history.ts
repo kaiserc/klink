@@ -14,6 +14,7 @@ export interface HistoryItem {
   magnet: string;
   dir: string;
   completedAt: number;
+  skipFolderIsolation?: boolean;
 }
 
 const write = serializeWrites();

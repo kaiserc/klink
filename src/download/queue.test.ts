@@ -452,6 +452,58 @@ describe("DownloadQueue folder isolation", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("preserves files in-place and passes root dir directly when skipFolderIsolation is true", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "torlink-skip-iso-test-"));
+    try {
+      const localFile = path.join(tmpDir, "MyAlbum.flac");
+      await fs.writeFile(localFile, "audio data");
+
+      const q = new DownloadQueue();
+      let addedDir: string | undefined;
+      const fakeEngine = (q as unknown as { engine: { add: (_id: string, _source: string, dir: string, handlers: any) => void; remove: (_id: string) => void } }).engine;
+      let capturedHandlers: any;
+      fakeEngine.add = (_id, _source, dir, handlers) => {
+        addedDir = dir;
+        capturedHandlers = handlers;
+      };
+      fakeEngine.remove = () => {};
+
+      q.add(
+        {
+          id: "local1",
+          name: "MyAlbum.flac",
+          magnet: "magnet:?xt=urn:btih:6666666666666666666666666666666666666666",
+          skipFolderIsolation: true,
+        },
+        tmpDir,
+      );
+
+      // Verify engine received tmpDir directly, NOT tmpDir/Downloads
+      expect(addedDir).toBe(tmpDir);
+      expect(await fs.stat(localFile).then(() => true).catch(() => false)).toBe(true);
+      expect(await fs.stat(path.join(tmpDir, "Downloads", "MyAlbum.flac")).then(() => true).catch(() => false)).toBe(false);
+
+      // Simulate completion -> transitions to seeding
+      capturedHandlers.onDone();
+
+      // Verify file is STILL in tmpDir directly, NOT moved to Seeding
+      expect(addedDir).toBe(tmpDir);
+      expect(await fs.stat(localFile).then(() => true).catch(() => false)).toBe(true);
+      expect(await fs.stat(path.join(tmpDir, "Seeding", "MyAlbum.flac")).then(() => true).catch(() => false)).toBe(false);
+
+      // Remove seed
+      q.removeSeed("local1");
+
+      // Verify file is STILL in tmpDir directly, NOT moved to Completed
+      expect(await fs.stat(localFile).then(() => true).catch(() => false)).toBe(true);
+      expect(await fs.stat(path.join(tmpDir, "Completed", "MyAlbum.flac")).then(() => true).catch(() => false)).toBe(false);
+
+      q.suspend();
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 

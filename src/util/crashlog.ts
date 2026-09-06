@@ -31,7 +31,7 @@ export function containUnhandledRejections(opts: { echo?: boolean } = {}): void 
     logCrash("unhandledRejection", reason);
     if (opts.echo) {
       const msg = reason instanceof Error ? reason.message : String(reason);
-      console.error(`[torlnk] recovered from a background error: ${msg}`);
+      console.error(`[klink] recovered from a background error: ${msg}`);
     }
   });
 }
@@ -46,7 +46,7 @@ export function containWarnings(opts: { echo?: boolean } = {}): void {
     logCrash("warning", warning);
     if (opts.echo) {
       const msg = warning instanceof Error ? (warning.stack ?? warning.message) : String(warning);
-      console.error(`[torlnk] warning: ${msg}`);
+      console.error(`[klink] warning: ${msg}`);
     }
   });
 }

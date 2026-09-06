@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCliArgs } from "./args";
+import { parseCliArgs, HELP_TEXT } from "./args";
 
 describe("parseCliArgs", () => {
   it("defaults to run with no args", () => {
@@ -10,6 +10,8 @@ describe("parseCliArgs", () => {
     expect(parseCliArgs(["-v"])).toEqual({ kind: "version" });
     expect(parseCliArgs(["--help"])).toEqual({ kind: "help" });
     expect(parseCliArgs(["-h"])).toEqual({ kind: "help" });
+    expect(HELP_TEXT).toContain("klink seed ./album");
+    expect(HELP_TEXT).not.toContain("torlnk");
   });
   it("launches a magnet", () => {
     expect(parseCliArgs(["magnet:?xt=urn:btih:abc"])).toEqual({

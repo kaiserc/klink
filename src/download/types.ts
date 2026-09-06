@@ -37,6 +37,7 @@ export interface SeedItem {
   uploadSpeed: number;
   uploaded: number;
   peers: number;
+  skipFolderIsolation?: boolean;
 }
 
 export interface QueueItem {
@@ -56,4 +57,5 @@ export interface QueueItem {
   error?: string;
   addedAt: number;
   strategy?: "rarest" | "sequential";
+  skipFolderIsolation?: boolean;
 }

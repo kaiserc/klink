@@ -37,7 +37,7 @@ export function Completed() {
         requestConfirm("Clear completed downloads history? Files will be deleted.", () => queue.clearHistory());
       } else if (input === "e") {
         const h = completedHistory[clamped];
-        if (h) openDownloadFolder(getCompletedDir(h.dir));
+        if (h) openDownloadFolder(h.skipFolderIsolation ? h.dir : getCompletedDir(h.dir));
       } else if (input === "i" || input === "Enter" || input === " ") {
         const h = completedHistory[clamped];
         if (h) setInspectingId(h.id);

@@ -75,7 +75,7 @@ async function restartDaemons(): Promise<void> {
     const res = await restartDaemon(d);
     console.log(
       res.stillRunning
-        ? "still shutting down; skipped (stop it, then rerun torlnk update --force)."
+        ? "still shutting down; skipped (stop it, then rerun klink update --force)."
         : res.newPid
           ? `now pid ${res.newPid}.`
           : "it had already stopped.",

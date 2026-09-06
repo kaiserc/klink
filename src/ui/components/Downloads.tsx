@@ -84,12 +84,12 @@ export function Downloads() {
       else if (input === "e") {
         if (inActive) {
           const it = active[clamped];
-          if (it) openDownloadFolder(getDownloadsDir(it.dir));
+          if (it) openDownloadFolder(it.skipFolderIsolation ? it.dir : getDownloadsDir(it.dir));
         } else {
           const h = recent[recentCursor];
           if (h) {
             const isSeeding = queue.getSeed(h.id);
-            openDownloadFolder(isSeeding ? getSeedingDir(h.dir) : getCompletedDir(h.dir));
+            openDownloadFolder(h.skipFolderIsolation ? h.dir : (isSeeding ? getSeedingDir(h.dir) : getCompletedDir(h.dir)));
           }
         }
       } else if (input === "s") {

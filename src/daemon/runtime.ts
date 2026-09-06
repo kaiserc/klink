@@ -48,13 +48,13 @@ export async function startRuntime(overrideDir?: string): Promise<Runtime> {
   queue.restoreSeeds(await loadSeeds(), { safe });
   setTimeout(disarmBootMarker, BOOT_SETTLE_MS).unref();
   if (safe) {
-    console.error("[torlnk] recovered from a crashed start: restored downloads are paused");
+    console.error("[klink] recovered from a crashed start: restored downloads are paused");
   }
   const downloadDir = overrideDir && overrideDir.trim() ? overrideDir.trim() : cfg.downloadDir;
   let autoDownloader: import("./autodownload").AutoDownloader | undefined;
   if (cfg.autoDownloads && cfg.autoDownloads.length > 0) {
     const { AutoDownloader } = await import("./autodownload");
-    autoDownloader = new AutoDownloader(queue, cfg, (msg) => console.log(`[torlnk auto] ${msg}`));
+    autoDownloader = new AutoDownloader(queue, cfg, (msg) => console.log(`[klink auto] ${msg}`));
     autoDownloader.start();
   }
   return { queue, downloadDir, recovered: safe, autoDownloader };
@@ -71,6 +71,7 @@ export interface AddInputOptions {
   // the watch folder opts in; a network caller (the HTTP add API) must never
   // be able to point the daemon at the local filesystem.
   allowTorrentPath?: boolean;
+  skipFolderIsolation?: boolean;
 }
 
 export async function addInput(
@@ -89,9 +90,17 @@ export async function addInput(
   if (!parsed) return "invalid";
   if (runtime.queue.has(parsed.infoHash)) return "duplicate";
   await fs.mkdir(runtime.downloadDir, { recursive: true }).catch(() => {});
-  runtime.queue.add(
-    { id: parsed.infoHash, name: parsed.name, magnet: parsed.magnet },
-    runtime.downloadDir,
-  );
+  if (options.skipFolderIsolation) {
+    runtime.queue.add(
+      { id: parsed.infoHash, name: parsed.name, magnet: parsed.magnet, skipFolderIsolation: true },
+      runtime.downloadDir,
+      { skipFolderIsolation: true },
+    );
+  } else {
+    runtime.queue.add(
+      { id: parsed.infoHash, name: parsed.name, magnet: parsed.magnet },
+      runtime.downloadDir,
+    );
+  }
   return "added";
 }

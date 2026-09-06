@@ -28,7 +28,7 @@ export interface SeedOptions {
 }
 
 function log(message: string): void {
-  console.log(`[torlnk seed] ${new Date().toISOString()} ${message}`);
+  console.log(`[klink seed] ${new Date().toISOString()} ${message}`);
 }
 
 // The directory a client must be pointed at for existing data to verify.
@@ -59,7 +59,7 @@ export async function runSeed(target: string, options: SeedOptions = {}): Promis
   // The download dir is the content's parent, not the configured one: this
   // torrent's data is already where it is, and moving it is not on offer.
   const runtime = await startRuntime(root);
-  const outcome = await addInput(runtime, created.torrentPath, { allowTorrentPath: true });
+  const outcome = await addInput(runtime, created.torrentPath, { allowTorrentPath: true, skipFolderIsolation: true });
   if (outcome === "invalid") throw new Error(`could not seed ${created.torrentPath}`);
   if (outcome === "duplicate") log("already in the queue — leaving it alone");
 
@@ -67,7 +67,7 @@ export async function runSeed(target: string, options: SeedOptions = {}): Promis
     startSeedReaper(runtime.queue, options.seedTimeMs, { deleteFiles: options.deleteFiles });
   }
 
-  // The magnet on its own line and nothing else on it, so `torlnk seed x | tail
+  // The magnet on its own line and nothing else on it, so `klink seed x | tail
   // -1` is a usable thing to write in a script.
   log(`seeding ${created.name} (${created.infoHash}) from ${root}`);
   console.log(created.magnet);

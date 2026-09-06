@@ -72,7 +72,7 @@ export function Seeding() {
         requestConfirm("Clear all seeding history?", () => queue.clearHistory());
       } else if (input === "e") {
         const h = activeHistory[clamped];
-        if (h) openDownloadFolder(getSeedingDir(h.dir));
+        if (h) openDownloadFolder(h.skipFolderIsolation ? h.dir : getSeedingDir(h.dir));
       } else if (input === "i") {
         const h = activeHistory[clamped];
         if (h) setInspectingId(h.id);

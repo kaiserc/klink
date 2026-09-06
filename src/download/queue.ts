@@ -89,6 +89,7 @@ export interface AddInput {
   magnet: string;
   source?: SourceId;
   sizeBytes?: number;
+  skipFolderIsolation?: boolean;
 }
 
 export interface RestoreOptions {
@@ -141,7 +142,7 @@ export class DownloadQueue extends EventEmitter {
     return this.items.has(id) || this.seeds.has(id) || this.history.some(h => h.id === id);
   }
 
-  add(input: AddInput, dir: string): void {
+  add(input: AddInput, dir: string, opts?: { skipFolderIsolation?: boolean }): void {
     if (this.seeds.has(input.id)) {
       this.engine.remove(input.id);
       this.seeds.delete(input.id);
@@ -151,6 +152,7 @@ export class DownloadQueue extends EventEmitter {
     }
     const existing = this.items.get(input.id);
     if (existing && existing.status !== "failed") return;
+    const skipFolderIsolation = opts?.skipFolderIsolation ?? input.skipFolderIsolation ?? existing?.skipFolderIsolation;
     const item: QueueItem = existing
       ? {
           ...existing,
@@ -161,6 +163,7 @@ export class DownloadQueue extends EventEmitter {
           status: "downloading",
           error: undefined,
           speed: 0,
+          skipFolderIsolation,
           ...(existing.dir === dir
             ? {}
             : { progress: 0, downloadedBytes: 0, eta: undefined }),
@@ -179,6 +182,7 @@ export class DownloadQueue extends EventEmitter {
           peers: 0,
           addedAt: Date.now(),
           strategy: "rarest",
+          skipFolderIsolation,
         };
     // Respect the concurrent-download cap: start now if a slot is free, else
     // hold the torrent as "queued" until one frees (see promote()).
@@ -194,7 +198,7 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private startEngine(item: QueueItem): void {
-    if (item.name) migrateLegacyPathSync(item.dir, item.name, "Downloads");
+    if (!item.skipFolderIsolation && item.name) migrateLegacyPathSync(item.dir, item.name, "Downloads");
     const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
     try {
       // Prefer the stored .torrent over the magnet, exactly as startSeeding
@@ -205,14 +209,9 @@ export class DownloadQueue extends EventEmitter {
       // a re-add of something already downloaded, and a torrent created from
       // local content, both go straight to complete instead of waiting on
       // peers that may not exist.
-      const source = torrentMetaExists(item.id) ? torrentMetaPath(item.id) : item.magnet;
-      // The magnet's own trackers ride along regardless of which source won.
-      // A row merged from several sources carries all of their announce URLs
-      // (see mergeMagnetTrackers), and a stored .torrent only knows the list it
-      // shipped with, so passing them explicitly is what keeps that merge from
-      // being undone on resume. webtorrent dedupes announce internally.
       const announce = [...(trackersOf(item.magnet) ?? []), ...this.trackers];
-      this.engine.add(item.id, source, getDownloadsDir(item.dir), this.engineHandlers(item.id), announce, item.strategy);
+      const targetDir = item.skipFolderIsolation ? item.dir : getDownloadsDir(item.dir);
+      this.engine.add(item.id, source, targetDir, this.engineHandlers(item.id), announce, item.strategy);
     } catch (e) {
       // engine.add routes webtorrent's own synchronous failures through
       // onError, so the only throw that reaches here is the client failing to
@@ -267,7 +266,7 @@ export class DownloadQueue extends EventEmitter {
         if (!it) return; // the rest only matters while still downloading
         if (meta.name) {
           it.name = meta.name;
-          migrateLegacyPathSync(it.dir, meta.name, "Downloads");
+          if (!it.skipFolderIsolation) migrateLegacyPathSync(it.dir, meta.name, "Downloads");
         }
         if (meta.total) it.totalBytes = meta.total;
         it.files = meta.files;
@@ -332,6 +331,7 @@ export class DownloadQueue extends EventEmitter {
         uploadSpeed: 0,
         uploaded: 0,
         peers: 0,
+        skipFolderIsolation: it.skipFolderIsolation,
       });
       void this.moveAndSeed(it);
     }
@@ -345,6 +345,12 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private async moveTorrent(id: string, name: string, baseDir: string, fromPhase: "Downloads" | "Seeding", toPhase: "Seeding" | "Completed"): Promise<void> {
+    const it = this.items.get(id);
+    const sd = this.seeds.get(id);
+    const hi = this.history.find((x) => x.id === id);
+    if (it?.skipFolderIsolation || sd?.skipFolderIsolation || hi?.skipFolderIsolation) {
+      return;
+    }
     const fromBase = fromPhase === "Downloads" ? getDownloadsDir(baseDir) : getSeedingDir(baseDir);
     const toBase = toPhase === "Seeding" ? getSeedingDir(baseDir) : getCompletedDir(baseDir);
     
@@ -367,7 +373,9 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private async moveAndSeed(it: QueueItem): Promise<void> {
-    await this.moveTorrent(it.id, it.name, it.dir, "Downloads", "Seeding");
+    if (!it.skipFolderIsolation) {
+      await this.moveTorrent(it.id, it.name, it.dir, "Downloads", "Seeding");
+    }
     const s = this.seeds.get(it.id);
     if (!s) return;
 
@@ -376,7 +384,8 @@ export class DownloadQueue extends EventEmitter {
     this.seedStartedAt.set(it.id, Date.now());
 
     const source = torrentMetaExists(it.id) ? torrentMetaPath(it.id) : it.magnet;
-    this.engine.add(it.id, source, getSeedingDir(it.dir), this.engineHandlers(it.id), this.trackers);
+    const targetDir = it.skipFolderIsolation ? it.dir : getSeedingDir(it.dir);
+    this.engine.add(it.id, source, targetDir, this.engineHandlers(it.id), this.trackers);
 
     this.ensurePoll();
     this.changed();
@@ -765,6 +774,7 @@ export class DownloadQueue extends EventEmitter {
       uploadSpeed: 0,
       uploaded: 0,
       peers: 0,
+      skipFolderIsolation: h.skipFolderIsolation,
     };
 
     // Only hard guard we can make synchronously and portably: no magnet, no seed.
@@ -782,10 +792,11 @@ export class DownloadQueue extends EventEmitter {
     this.seedStartedAt.set(h.id, Date.now());
     // Seed from the stored .torrent metadata when we have it (verifies the local
     // file immediately, no swarm needed); fall back to the magnet otherwise.
-    if (h.name) migrateLegacyPathSync(h.dir, h.name, "Seeding");
+    if (!h.skipFolderIsolation && h.name) migrateLegacyPathSync(h.dir, h.name, "Seeding");
     const source = torrentMetaExists(h.id) ? torrentMetaPath(h.id) : h.magnet;
     try {
-      this.engine.add(h.id, source, getSeedingDir(h.dir), this.engineHandlers(h.id), this.trackers);
+      const targetDir = h.skipFolderIsolation ? h.dir : getSeedingDir(h.dir);
+      this.engine.add(h.id, source, targetDir, this.engineHandlers(h.id), this.trackers);
     } catch {
       // Same narrow case as startEngine: only a client that won't construct
       // lands here. Leave the seed paused so it stays visible and resumable.
@@ -826,7 +837,9 @@ export class DownloadQueue extends EventEmitter {
     void this.persistSeeds();
     this.maybeStopPoll();
 
-    void this.moveTorrent(s.id, s.name, s.dir, "Seeding", "Completed");
+    if (!s.skipFolderIsolation) {
+      void this.moveTorrent(s.id, s.name, s.dir, "Seeding", "Completed");
+    }
   }
 
   toggleSeeding(h: HistoryItem): void {
@@ -862,6 +875,7 @@ export class DownloadQueue extends EventEmitter {
       uploadSpeed: 0,
       uploaded: 0,
       peers: 0,
+      skipFolderIsolation: h.skipFolderIsolation,
     });
     this.changed();
   }
@@ -895,7 +909,7 @@ export class DownloadQueue extends EventEmitter {
     }
     let active = 0;
     for (const raw of items) {
-      if (raw.name) migrateLegacyPathSync(raw.dir, raw.name, "Downloads");
+      if (!raw.skipFolderIsolation && raw.name) migrateLegacyPathSync(raw.dir, raw.name, "Downloads");
       this.items.set(raw.id, raw);
       if (raw.status !== "downloading") continue;
       if (this.maxDownloads === 0 || active < this.maxDownloads) {
@@ -929,6 +943,7 @@ export class DownloadQueue extends EventEmitter {
       magnet: it.magnet,
       dir: it.dir,
       completedAt: Date.now(),
+      skipFolderIsolation: it.skipFolderIsolation,
     };
     this.history = [rec, ...this.history.filter((h) => h.id !== it.id)].slice(0, HISTORY_MAX);
     void saveHistory(this.history).catch(() => {});

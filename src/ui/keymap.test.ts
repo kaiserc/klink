@@ -105,4 +105,32 @@ describe("HELP_GROUPS", () => {
     const downloadsInspectHint = downloadsGroup?.hints.find((h) => h.keys === "i");
     expect(downloadsInspectHint).toBeDefined();
   });
+
+  it("includes 'Q' for auto-close in Navigate and Downloads groups", () => {
+    const navGroup = HELP_GROUPS.find((g) => g.title === "Navigate");
+    const navAutoClose = navGroup?.hints.find((h) => h.keys === "Q");
+    expect(navAutoClose).toBeDefined();
+    expect(navAutoClose?.label).toBe("Auto-close on finish");
+
+    const dlGroup = HELP_GROUPS.find((g) => g.title === "Downloads");
+    const dlAutoClose = dlGroup?.hints.find((h) => h.keys === "Q");
+    expect(dlAutoClose).toBeDefined();
+    expect(dlAutoClose?.label).toBe("Auto-close on finish");
+  });
+
+  it("shows Auto-close hint in yellow when autoClose is enabled", () => {
+    const hints = footerHints("content", "all", false, null, null, null, false, false, null, false, true);
+    const autoCloseHint = hints.find((h) => h.keys === "Q");
+    expect(autoCloseHint).toBeDefined();
+    expect(autoCloseHint?.color).toBe("yellow");
+  });
+
+  it("shows Auto-close hint in downloads section even when disabled", () => {
+    const hints = footerHints("content", "downloads", false, null, "downloading", null, false, false, null, false, false);
+    const autoCloseHint = hints.find((h) => h.keys === "Q");
+    expect(autoCloseHint).toBeDefined();
+    expect(autoCloseHint?.label).toBe("Auto-close");
+    expect(autoCloseHint?.color).toBeUndefined();
+  });
 });
+

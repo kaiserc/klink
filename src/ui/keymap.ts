@@ -24,6 +24,7 @@ export const HELP_GROUPS: HelpGroup[] = [
       { keys: "n", label: "Network interface binding" },
       { keys: "b", label: "Turtle Mode (Throttle)" },
       { keys: "W", label: "Toggle Web Server" },
+      { keys: "Q", label: "Auto-close on finish" },
       { keys: "q", label: "Quit" },
     ],
   },
@@ -55,6 +56,7 @@ export const HELP_GROUPS: HelpGroup[] = [
       { keys: "w", label: "Inspect peers" },
       { keys: "s", label: "Export torrent file" },
       { keys: "shift+s", label: "Toggle sequential downloading" },
+      { keys: "Q", label: "Auto-close on finish" },
     ],
   },
   {
@@ -93,6 +95,7 @@ export function footerHints(
   inspectFocusSelected?: boolean,
   resultFocus?: ResultFocus | null,
   inspectingMeta?: boolean,
+  autoClose?: boolean,
 ): Hint[] {
   const getHints = (): Hint[] => {
     if (inspectingMeta) {
@@ -194,6 +197,18 @@ export function footerHints(
       const switchIdx = hints.findIndex((h) => h.keys === "tab");
       if (switchIdx >= 0) hints.splice(switchIdx, 0, peerHint);
       else hints.push(peerHint);
+    }
+  }
+
+  if (autoClose || (region === "content" && section === "downloads")) {
+    const autoCloseHint: Hint = autoClose
+      ? { keys: "Q", label: "Auto-close", color: "yellow" }
+      : { keys: "Q", label: "Auto-close" };
+    const switchIdx = hints.findIndex((h) => h.keys === "tab");
+    if (switchIdx >= 0) {
+      hints.splice(switchIdx, 0, autoCloseHint);
+    } else {
+      hints.push(autoCloseHint);
     }
   }
 

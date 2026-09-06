@@ -138,6 +138,8 @@ export function App({
   }, []);
   
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [autoClose, setAutoClose] = useState(false);
+  const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [recovered, setRecovered] = useState(false);
   const booting = useRef(false);
 
@@ -223,31 +225,11 @@ export function App({
     };
   }, []);
 
-  useEffect(() => {
-    if (!queue) return;
-    const onCompleted = (name: string): void =>
-      setNotice(`${ICON.done} ${truncate(cleanText(name), 40)}`);
-    queue.on("completed", onCompleted);
-    return () => {
-      queue.off("completed", onCompleted);
-    };
-  }, [queue]);
-
-  useEffect(() => {
-    setInspectingId(null);
-    setInspectingPeersId(null);
-  }, [section]);
-
-
-  useEffect(
-    () => () => {
-      autoDownloader?.stop();
-      queue?.suspend();
-    },
-    [queue, autoDownloader],
-  );
-
   const quitAll = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     // Flush all state synchronously up front so nothing is lost to the hard
     // exit; the unmount effect still runs suspend() for the engine teardown.
     autoDownloader?.stop();
@@ -255,6 +237,46 @@ export function App({
     if (onQuit) onQuit();
     else exit();
   }, [queue, autoDownloader, onQuit, exit]);
+
+  useEffect(() => {
+    if (!queue) return;
+    const onCompleted = (name: string): void => {
+      setNotice(`${ICON.done} ${truncate(cleanText(name), 40)}`);
+      if (autoClose) {
+        const remaining = queue.getItems().some(
+          (item) => item.status === "downloading" || item.status === "queued"
+        );
+        if (!remaining) {
+          setNotice("All downloads completed · Closing app in 2s...");
+          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = setTimeout(() => {
+            quitAll();
+          }, 2000);
+        }
+      }
+    };
+    queue.on("completed", onCompleted);
+    return () => {
+      queue.off("completed", onCompleted);
+    };
+  }, [queue, autoClose, quitAll]);
+
+  useEffect(() => {
+    setInspectingId(null);
+    setInspectingPeersId(null);
+  }, [section]);
+
+  useEffect(
+    () => () => {
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+      autoDownloader?.stop();
+      queue?.suspend();
+    },
+    [queue, autoDownloader],
+  );
 
   const setConfig = useCallback(
     (c: Config) => {
@@ -283,6 +305,18 @@ export function App({
     if (!config) return;
     setConfig({ ...config, throttleEnabled: !config.throttleEnabled });
   }, [config, setConfig]);
+
+  const toggleAutoClose = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setAutoClose((prev) => {
+      const next = !prev;
+      setNotice(next ? "Auto-close enabled · will close when downloads finish" : "Auto-close disabled");
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (queue && config) {
@@ -622,6 +656,8 @@ export function App({
       setInspectFocusSelected,
       toggleFileSelection,
       toggleThrottle,
+      autoClose,
+      toggleAutoClose,
       quitAll,
       listRows,
       compact,
@@ -660,6 +696,8 @@ export function App({
     inspectingMetaMagnet,
     toggleFileSelection,
     toggleThrottle,
+    autoClose,
+    toggleAutoClose,
     listRows,
     compact,
     contentWidth,
@@ -775,6 +813,10 @@ export function App({
         quitAll();
         return;
       }
+      if (input === "Q") {
+        toggleAutoClose();
+        return;
+      }
       if (input === "b") {
         store?.toggleThrottle();
         return;
@@ -812,6 +854,7 @@ export function App({
               <Logo />
               {store.config.throttleEnabled ? <Text dimColor>🐢 Throttled</Text> : null}
               {store.config.webServerEnabled ? <Text dimColor>🌐 http://localhost:{store.config.webServerPort}</Text> : null}
+              {store.autoClose ? <Text color="yellow">⏱ Auto-close</Text> : null}
             </Box>
             {notice ? (
               <Box flexShrink={1} minWidth={0} marginLeft={2}>
@@ -921,7 +964,7 @@ export function App({
 
         {showFooter ? (
           <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
-            <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected, resultFocus, !!inspectingMetaId)} />
+            <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected, resultFocus, !!inspectingMetaId, store.autoClose)} />
           </Box>
         ) : null}
       </Box>

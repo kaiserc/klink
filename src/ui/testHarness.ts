@@ -185,6 +185,8 @@ export function makeTestStore(overrides: Partial<Store> = {}): Store {
     setInspectFocusSelected: noop,
     toggleFileSelection: noop,
     toggleThrottle: noop,
+    autoClose: false,
+    toggleAutoClose: noop,
     requestConfirm: (_msg, cb) => cb(),
     ...overrides,
   };

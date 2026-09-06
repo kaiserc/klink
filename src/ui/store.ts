@@ -97,6 +97,8 @@ export interface Store {
   setInspectFocusSelected: (s: boolean) => void;
   toggleFileSelection: (id: string, path: string, selected: boolean) => void;
   quitAll: () => void;
+  autoClose: boolean;
+  toggleAutoClose: () => void;
 
   listRows: number;
   compact: boolean;

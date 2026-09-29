@@ -127,4 +127,16 @@ describe("writePlaylists", () => {
     expect((await fs.lstat(path.join(course, "playlist.m3u"))).isSymbolicLink()).toBe(true);
     expect(await fs.readdir(outside)).toEqual([]);
   });
+
+  it("writes playlist inside isolated Downloads/ folder when folder isolation is active", async () => {
+    const isolatedCourse = path.join(dir, "Downloads", "Course", "Module");
+    await fs.mkdir(isolatedCourse, { recursive: true });
+    const files = ["Course/Module/1.mp4", "Course/Module/2.mp4"];
+    await writePlaylists(dir, files);
+    expect(await fs.readFile(path.join(dir, "Downloads", "Course", "playlist.m3u"), "utf8"))
+      .toBe("#EXTM3U\n./Module/1.mp4\n./Module/2.mp4\n");
+    expect(await fs.readFile(path.join(isolatedCourse, "playlist.m3u"), "utf8"))
+      .toBe("#EXTM3U\n./1.mp4\n./2.mp4\n");
+  });
 });
+

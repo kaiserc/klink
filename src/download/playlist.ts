@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { logCrash } from "../util/crashlog";
+import { getDownloadsDir, getSeedingDir } from "../config/folder";
 
 const MEDIA_EXTENSIONS = new Set([
   ".aac", ".aiff", ".avi", ".flac", ".flv", ".m2ts", ".m4a", ".m4v",
@@ -60,9 +61,30 @@ export async function writePlaylists(downloadDir: string, filePaths: string[]): 
     const root = await fs.realpath(downloadDir);
     for (const [relative, content] of playlists) {
       try {
-        const target = path.join(root, relative);
-        const parent = await fs.realpath(path.dirname(target));
-        const inside = path.relative(root, parent);
+        let effectiveRoot = root;
+        let target = path.join(effectiveRoot, relative);
+        let parent: string;
+        try {
+          parent = await fs.realpath(path.dirname(target));
+        } catch (firstErr) {
+          // Check if folder isolation placed the torrent under Downloads or Seeding
+          let isolatedParent: string | undefined;
+          for (const getSubDir of [getDownloadsDir, getSeedingDir]) {
+            try {
+              const subRoot = await fs.realpath(getSubDir(root));
+              const isolatedTarget = path.join(subRoot, relative);
+              const resolved = await fs.realpath(path.dirname(isolatedTarget));
+              effectiveRoot = subRoot;
+              target = isolatedTarget;
+              isolatedParent = resolved;
+              break;
+            } catch {}
+          }
+          if (!isolatedParent) throw firstErr;
+          parent = isolatedParent;
+        }
+
+        const inside = path.relative(effectiveRoot, parent);
         if (
           !inside || inside === ".." || inside.startsWith(`..${path.sep}`) || path.isAbsolute(inside)
         ) continue;
@@ -76,3 +98,4 @@ export async function writePlaylists(downloadDir: string, filePaths: string[]): 
     logCrash("playlist", error);
   }
 }
+

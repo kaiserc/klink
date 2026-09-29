@@ -58,4 +58,6 @@ export interface QueueItem {
   addedAt: number;
   strategy?: "rarest" | "sequential";
   skipFolderIsolation?: boolean;
+  // Carried from add() into the history entry on completion (see HistoryItem).
+  seedTimeMs?: number;
 }

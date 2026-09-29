@@ -67,6 +67,8 @@ Downloads run in the background while you keep searching, so you can queue up as
   <img src="preview/downloads.svg" alt="klink's Downloads pane: live progress on top, recently downloaded below" style="max-width: 832px; width: 100%; height: auto;">
 </p>
 
+When a download comes with several videos or tracks, klink drops a `playlist.m3u` into each folder holding more than one, so a course split into modules plays straight through in order. Run `klink --no-playlist` if you'd rather it didn't.
+
 ## What it searches
 
 A short, hand-picked list of trusted sources:
@@ -108,6 +110,12 @@ It turns the folder into a torrent, saves `album.torrent` next to it, prints the
 
     POST /add {"magnet":"magnet:?xt=..."}
     POST /add {"torrent":"<base64>"}
+
+Either can carry a `seedTime` for that one torrent, in the same grammar as `--seed-time` (`"30d"`, `"2h"`; `0` means never stop). It wins over the daemon-wide flag, so a box that normally drops seeds after a couple of hours can keep one release alive for a month. Change it later, or on something already downloading, through the control endpoint:
+
+    POST /control {"id":"<info hash>","action":"seed-time","seedTime":"30d"}
+
+`GET /downloads` reports the limit and when it falls due (`seedUntil`) on every torrent that has one.
 
 ## Contributing
 

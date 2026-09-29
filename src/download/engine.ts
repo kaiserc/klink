@@ -43,6 +43,9 @@ export interface ExtendedTorrentMeta {
 
 export interface AddHandlers {
   onMetadata?: (meta: TorrentMeta) => void;
+  // webtorrent has checked any pieces already on disk against their hashes and
+  // the torrent is ready to trade. On a large seed that check runs for minutes.
+  onReady?: () => void;
   onDone?: () => void;
   onError?: (message: string) => void;
 }
@@ -72,18 +75,20 @@ export class TorrentEngine {
       // on macOS because the port is permanently taken, so disable it
       // and let UPnP handle NAT traversal instead.
       //
-      // Disable uTP across all platforms:
-      // WebTorrent's uTP implementation relies on `utp-native`, which allocates
-      // an independent UDP socket for every outgoing connection attempt. Under
-      // peer discovery churn, this rapidly exhausts socket buffer space and
-      // ephemeral ports (leading to WSAENOBUFS / ENOBUFS: "no buffer space available").
-      // Furthermore, when `utp-native` fails to bind, it emits an unhandled 'error'
-      // on an internal EventEmitter with no listeners, crashing the process as an
-      // uncaught exception. Disabling uTP forces WebTorrent to use standard TCP
-      // connections, which are supported by 100% of BitTorrent clients and operate
-      // reliably without socket buffer exhaustion.
+      // TORLINK_NO_UTP / KLINK_NO_UTP turns uTP off. It stays on by default,
+      // the way every major client ships it, but webtorrent can exhaust the socket
+      // pool with it: `utp-native` multiplexes perfectly well (UTP.prototype.connect
+      // reuses an existing binding) and webtorrent already holds a bound uTP
+      // socket on the TCP port, yet lib/torrent.js dials through the
+      // module-level `UTP.connect`, which allocates a fresh UDP socket per
+      // outgoing peer. Sockets then scale with peer count until the ephemeral
+      // port pool or buffer space runs out (WSAENOBUFS on Windows, EMFILE
+      // against the fd limit elsewhere), and a failed bind is re-emitted on an
+      // emitter nothing listens to, so it arrives as an uncaughtException and
+      // kills the process. The opt-out is a workaround until that dial path is
+      // fixed upstream.
       const opts = {
-        utp: false,
+        ...(process.env.TORLINK_NO_UTP || process.env.KLINK_NO_UTP ? { utp: false } : {}),
         ...(process.platform === "darwin" ? { natPmp: false } : {}),
       };
       this.client = new WebTorrent(opts);
@@ -152,6 +157,9 @@ export class TorrentEngine {
         torrentFile: torrent.torrentFile,
       });
     });
+    torrent.on("ready", () => {
+      handlers.onReady?.();
+    });
     torrent.on("done", () => {
       // A finished torrent is a complete, verified torrent: keep it alive so it
       // can seed. The queue owns its lifetime from here (remove/destroy).
@@ -166,6 +174,12 @@ export class TorrentEngine {
   // The TCP port the client accepts incoming peers on (diagnostics / tests).
   listenPort(): number | null {
     return this.client?.torrentPort ?? null;
+  }
+
+  // A torrent's file paths relative to its download dir, top-level folder
+  // included; empty before metadata arrives or once the torrent is gone.
+  filePaths(id: string): string[] {
+    return (this.torrents.get(id)?.files ?? []).map((file) => file.path);
   }
 
   stats(id: string): TorrentProgress | null {

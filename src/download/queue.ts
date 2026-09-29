@@ -14,6 +14,7 @@ import {
 } from "./persist";
 import { saveHistory, saveHistorySync, type HistoryItem } from "./history";
 import { deleteSeedData } from "./delete-data";
+import { writePlaylists } from "./playlist";
 import { disarmBootMarker } from "./bootguard";
 import { trackersOf } from "../sources/magnet";
 import type {
@@ -62,10 +63,14 @@ export function strayDownload(s: { total: number; progress: number; speed: numbe
 
 const STRAY_TICKS = 2; // consecutive stray polls before flagging missing (~1s)
 
-// How long (ms) to let webtorrent verify on-disk pieces before the stray-download
-// detector starts watching. Verification reads the disk and can briefly report
-// downloadSpeed > 0 / progress < 1, which is indistinguishable from a truly
-// missing file. 10 s covers most single-torrent verifications comfortably.
+// How long (ms) the stray-download detector keeps ignoring a restored seed once
+// webtorrent has checked its on-disk pieces. Nothing is downloaded during the
+// check, but the moment it ends any piece that failed it is fetched from peers,
+// which reads the same as a missing file. The check grows with the torrent: on
+// a 24 GB seed a window counted from add time ran out long before the check
+// did, and the repair that followed got a seed with its data on disk flagged
+// missing. So the clock starts when the check ends (the engine's onReady), and
+// the grace only has to cover that repair.
 const SEED_GRACE_MS = 10_000;
 
 // A magnet with no peers never fires onMetadata or onError, so a metadata-only
@@ -90,6 +95,9 @@ export interface AddInput {
   source?: SourceId;
   sizeBytes?: number;
   skipFolderIsolation?: boolean;
+  // Stop seeding this long (ms) after it finishes; 0 = never. Undefined leaves
+  // the daemon-wide --seed-time in charge.
+  seedTimeMs?: number;
 }
 
 export interface RestoreOptions {
@@ -106,15 +114,20 @@ export class DownloadQueue extends EventEmitter {
   private history: HistoryItem[] = [];
   private seeds = new Map<string, SeedItem>();
   private strayHits = new Map<string, number>();
-  private seedStartedAt = new Map<string, number>();
+  // When each seed's grace began; null while webtorrent is still checking a
+  // restored seed's files on disk, before the clock has started.
+  private seedStartedAt = new Map<string, number | null>();
   private trackers: string[] = [];
 
   // Max torrents allowed to download at once; overflow waits as "queued".
   private readonly maxDownloads: number;
+  // Write playlist.m3u into a finished download's media folders.
+  private readonly playlist: boolean;
 
-  constructor(opts?: { maxDownloads?: number }) {
+  constructor(opts?: { maxDownloads?: number; playlist?: boolean }) {
     super();
     this.maxDownloads = opts?.maxDownloads ?? readMaxDownloads();
+    this.playlist = opts?.playlist ?? !process.env.TORLINK_NO_PLAYLIST;
   }
 
   // Extra announce URLs appended to every torrent added from now on.
@@ -162,8 +175,8 @@ export class DownloadQueue extends EventEmitter {
           dir,
           status: "downloading",
           error: undefined,
-          speed: 0,
           skipFolderIsolation,
+          ...(input.seedTimeMs !== undefined ? { seedTimeMs: input.seedTimeMs } : {}),
           ...(existing.dir === dir
             ? {}
             : { progress: 0, downloadedBytes: 0, eta: undefined }),
@@ -183,6 +196,7 @@ export class DownloadQueue extends EventEmitter {
           addedAt: Date.now(),
           strategy: "rarest",
           skipFolderIsolation,
+          ...(input.seedTimeMs !== undefined ? { seedTimeMs: input.seedTimeMs } : {}),
         };
     // Respect the concurrent-download cap: start now if a slot is free, else
     // hold the torrent as "queued" until one frees (see promote()).
@@ -273,6 +287,10 @@ export class DownloadQueue extends EventEmitter {
         this.changed();
         void this.persist();
       },
+      onReady: () => {
+        // A restored seed's on-disk check just finished: start its grace clock.
+        if (this.seedStartedAt.get(id) === null) this.seedStartedAt.set(id, Date.now());
+      },
       onDone: () => {
         const it = this.items.get(id);
         if (it) {
@@ -317,6 +335,7 @@ export class DownloadQueue extends EventEmitter {
 
   private complete(it: QueueItem): void {
     this.items.delete(it.id);
+    if (this.playlist) void writePlaylists(it.dir, this.engine.filePaths(it.id));
     this.engine.remove(it.id);
 
     if (it.magnet) {
@@ -327,11 +346,12 @@ export class DownloadQueue extends EventEmitter {
         magnet: it.magnet,
         dir: it.dir,
         sizeBytes: it.totalBytes,
-        status: "paused",
+        status: "seeding",
         uploadSpeed: 0,
         uploaded: 0,
         peers: 0,
         skipFolderIsolation: it.skipFolderIsolation,
+        ...(it.seedTimeMs !== undefined ? { seedTimeMs: it.seedTimeMs } : {}),
       });
       void this.moveAndSeed(it);
     }
@@ -419,10 +439,11 @@ export class DownloadQueue extends EventEmitter {
       // it a couple of ticks (ignore a one-piece repair blip), then stop it and
       // flag missing, never re-download the whole thing.
       //
-      // Skip seeds still inside the grace period: webtorrent needs time to
-      // hash-verify on-disk pieces, and during that window progress < 1 with
-      // downloadSpeed > 0 is perfectly normal.
-      const age = now - (this.seedStartedAt.get(sd.id) ?? 0);
+      // Skip seeds webtorrent is still checking (a null start) and seeds still
+      // inside the grace after it: until then progress < 1 with downloadSpeed > 0
+      // is perfectly normal.
+      const started = this.seedStartedAt.get(sd.id);
+      const age = started === null ? 0 : now - (started ?? 0);
       if (age > SEED_GRACE_MS && strayDownload(s)) {
         const hits = (this.strayHits.get(sd.id) ?? 0) + 1;
         this.strayHits.set(sd.id, hits);
@@ -789,7 +810,9 @@ export class DownloadQueue extends EventEmitter {
 
     this.seeds.set(h.id, base);
     this.strayHits.set(h.id, 0);
-    this.seedStartedAt.set(h.id, Date.now());
+    // No clock yet: the grace starts at onReady, after webtorrent has checked the
+    // files on disk, however long a large torrent takes to get through that.
+    this.seedStartedAt.set(h.id, null);
     // Seed from the stored .torrent metadata when we have it (verifies the local
     // file immediately, no swarm needed); fall back to the magnet otherwise.
     if (!h.skipFolderIsolation && h.name) migrateLegacyPathSync(h.dir, h.name, "Seeding");
@@ -934,6 +957,30 @@ export class DownloadQueue extends EventEmitter {
     return this.history;
   }
 
+  // Set (or with undefined, clear) the per-torrent seed limit on a download
+  // still in flight or on a finished one. Returns false when the id is unknown
+  // to both, so a caller can answer not-found without a second lookup. The
+  // seed reaper reads the value from history, so a finished torrent's timer
+  // changes on its next tick; an in-flight one carries the value into history
+  // when it completes.
+  setSeedTime(id: string, seedTimeMs: number | undefined): boolean {
+    const it = this.items.get(id);
+    if (it) {
+      if (seedTimeMs === undefined) delete it.seedTimeMs;
+      else it.seedTimeMs = seedTimeMs;
+      void this.persist();
+    }
+    const h = this.history.find((x) => x.id === id);
+    if (h) {
+      if (seedTimeMs === undefined) delete h.seedTimeMs;
+      else h.seedTimeMs = seedTimeMs;
+      void saveHistory(this.history).catch(() => {});
+    }
+    if (!it && !h) return false;
+    this.changed();
+    return true;
+  }
+
   private recordHistory(it: QueueItem): void {
     const rec: HistoryItem = {
       id: it.id,
@@ -944,6 +991,7 @@ export class DownloadQueue extends EventEmitter {
       dir: it.dir,
       completedAt: Date.now(),
       skipFolderIsolation: it.skipFolderIsolation,
+      ...(it.seedTimeMs !== undefined ? { seedTimeMs: it.seedTimeMs } : {}),
     };
     this.history = [rec, ...this.history.filter((h) => h.id !== it.id)].slice(0, HISTORY_MAX);
     void saveHistory(this.history).catch(() => {});

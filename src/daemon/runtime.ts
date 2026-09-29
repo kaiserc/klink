@@ -32,12 +32,12 @@ export interface Runtime {
 // Build a queue and restore persisted state, matching the TUI's boot order
 // (history before seeds — seeds resolve against history). `downloadDir` falls
 // back to the saved config's dir when the caller doesn't override it.
-export async function startRuntime(overrideDir?: string): Promise<Runtime> {
+export async function startRuntime(overrideDir?: string, options: { playlist?: boolean } = {}): Promise<Runtime> {
   const cfg = await loadConfig();
   const { applyNetworkBinding } = await import("../download/network");
   applyNetworkBinding(cfg);
   
-  const queue = new DownloadQueue();
+  const queue = new DownloadQueue({ playlist: options.playlist });
   queue.setTrackers(cfg.trackers);
   // Crash-boot breaker, mirroring the TUI: a marker left by the previous run
   // means it died mid-restore, so restore paused with the engine cold.
@@ -72,6 +72,9 @@ export interface AddInputOptions {
   // be able to point the daemon at the local filesystem.
   allowTorrentPath?: boolean;
   skipFolderIsolation?: boolean;
+  // Per-torrent seed limit (ms after completion; 0 = never stop). Unset
+  // inherits the daemon-wide --seed-time.
+  seedTimeMs?: number;
 }
 
 export async function addInput(
@@ -90,15 +93,22 @@ export async function addInput(
   if (!parsed) return "invalid";
   if (runtime.queue.has(parsed.infoHash)) return "duplicate";
   await fs.mkdir(runtime.downloadDir, { recursive: true }).catch(() => {});
+  const item = {
+    id: parsed.infoHash,
+    name: parsed.name,
+    magnet: parsed.magnet,
+    ...(options.skipFolderIsolation ? { skipFolderIsolation: true } : {}),
+    ...(options.seedTimeMs !== undefined ? { seedTimeMs: options.seedTimeMs } : {}),
+  };
   if (options.skipFolderIsolation) {
     runtime.queue.add(
-      { id: parsed.infoHash, name: parsed.name, magnet: parsed.magnet, skipFolderIsolation: true },
+      item,
       runtime.downloadDir,
       { skipFolderIsolation: true },
     );
   } else {
     runtime.queue.add(
-      { id: parsed.infoHash, name: parsed.name, magnet: parsed.magnet },
+      item,
       runtime.downloadDir,
     );
   }

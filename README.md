@@ -67,7 +67,7 @@ Downloads run in the background while you keep searching, so you can queue up as
   <img src="preview/downloads.svg" alt="klink's Downloads pane: live progress on top, recently downloaded below" style="max-width: 832px; width: 100%; height: auto;">
 </p>
 
-When a download comes with several videos or tracks, klink drops a `playlist.m3u` into each folder holding more than one, so a course split into modules plays straight through in order. Run `klink --no-playlist` if you'd rather it didn't.
+When a download comes with several videos or tracks, klink drops a `playlist.m3u` into each folder holding more than one, so a course split into modules plays straight through in order. Run `klink --no-playlist` (or set `KLINK_NO_PLAYLIST=1` / `TORLINK_NO_PLAYLIST=1`) if you'd rather it didn't.
 
 ## What it searches
 
@@ -154,16 +154,15 @@ Before opening a PR, skim [CONTRIBUTING.md](CONTRIBUTING.md); it lays out the ba
 | Turtle Mode (`b`) | ❌ | ✅ |
 | File Inspection & Selection (`i` / `space`) | ❌ | ✅ |
 | Metadata Inspector (`v`) | ❌ | ✅ |
-| Headless JSON Search (`klink search`) | ❌ | ✅ |
 | RSS Auto-Downloader | ❌ | ✅ |
 | Advanced Search Filtering | ❌ | ✅ |
 | Sequential Downloading (`shift+s`) | ❌ | ✅ |
 | Network Interface Binding (`n`) | ❌ | ✅ |
 | Media Streaming & Web Player | ❌ | ✅ |
-| Completion Tab | ❌ | ✅ |
+| Completion Tab & Folder Isolation | ❌ | ✅ (`Downloads/`, `Seeding/`, `Completed/`) |
 | Confirmation Dialogs | ❌ | ✅ |
 | Expanded Categories (E-Books & Audiobooks) | ❌ | ✅ |
-| WebTorrent null-ref patch | ❌ | ✅ |
+| WebTorrent stability patches | ❌ | ✅ |
 
 ## Privacy
 

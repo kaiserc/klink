@@ -272,6 +272,8 @@ export async function runFiles(options: FilesOptions = {}): Promise<void> {
 
   await new Promise<void>((resolve) => {
     const shutdown = (): void => {
+      process.off("SIGINT", shutdown);
+      process.off("SIGTERM", shutdown);
       server.close();
       resolve();
     };

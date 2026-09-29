@@ -7,6 +7,7 @@ export class AutoDownloader {
   private queue: DownloadQueue;
   private config: Config;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private initialTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private log: (msg: string) => void;
 
@@ -17,16 +18,23 @@ export class AutoDownloader {
   }
 
   start() {
-    if (this.timer) return;
+    if (this.timer || this.initialTimer) return;
     const interval = this.config.autoDownloadIntervalMs > 0 ? this.config.autoDownloadIntervalMs : 3600000;
     this.timer = setInterval(() => void this.run(), interval);
     
     // Initial run after a short delay so boot isn't blocked
-    const initialDelayTimer = setTimeout(() => void this.run(), 5000);
-    initialDelayTimer.unref(); // prevent this from blocking process exit
+    this.initialTimer = setTimeout(() => {
+      this.initialTimer = null;
+      void this.run();
+    }, 5000);
+    this.initialTimer.unref(); // prevent this from blocking process exit
   }
 
   stop() {
+    if (this.initialTimer) {
+      clearTimeout(this.initialTimer);
+      this.initialTimer = null;
+    }
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;

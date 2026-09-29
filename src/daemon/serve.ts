@@ -395,7 +395,10 @@ export async function runServe(options: ServeOptions = {}): Promise<void> {
 
   await new Promise<void>((resolve) => {
     const shutdown = (): void => {
+      process.off("SIGINT", shutdown);
+      process.off("SIGTERM", shutdown);
       server.close();
+      runtime.autoDownloader?.stop();
       runtime.queue.suspend();
       resolve();
     };

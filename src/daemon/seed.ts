@@ -78,6 +78,9 @@ export async function runSeed(target: string, options: SeedOptions = {}): Promis
   // ever flushing state through suspend().
   await new Promise<void>((resolve) => {
     const shutdown = (): void => {
+      process.off("SIGINT", shutdown);
+      process.off("SIGTERM", shutdown);
+      runtime.autoDownloader?.stop();
       runtime.queue.suspend();
       resolve();
     };

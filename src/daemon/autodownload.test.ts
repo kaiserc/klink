@@ -83,4 +83,19 @@ describe("AutoDownloader", () => {
 
     expect(mockQueue.add).not.toHaveBeenCalled();
   });
+
+  it("clears initial timer when stopped before delay expires", () => {
+    vi.useFakeTimers();
+    try {
+      const downloader = new AutoDownloader(mockQueue as unknown as DownloadQueue, mockConfig);
+      const runSpy = vi.spyOn(downloader, "run").mockResolvedValue();
+      downloader.start();
+      downloader.stop();
+      vi.advanceTimersByTime(6000);
+      expect(runSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+

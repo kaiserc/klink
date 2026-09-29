@@ -121,7 +121,10 @@ export async function runWatch(
 
   await new Promise<void>((resolve) => {
     const shutdown = (): void => {
+      process.off("SIGINT", shutdown);
+      process.off("SIGTERM", shutdown);
       clearInterval(timer);
+      runtime.autoDownloader?.stop();
       runtime.queue.suspend();
       resolve();
     };

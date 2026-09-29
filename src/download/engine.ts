@@ -281,7 +281,7 @@ export class TorrentEngine {
     };
   }
 
-  async fetchMetadata(id: string, magnet: string): Promise<TorrentFileInfo[]> {
+  async fetchMetadata(id: string, magnet: string, timeoutMs = 30_000): Promise<TorrentFileInfo[]> {
     // Check if it's already active
     const existing = this.torrents.get(id);
     if (existing && existing.files) {
@@ -294,25 +294,59 @@ export class TorrentEngine {
 
     const promise = new Promise<TorrentFileInfo[]>((resolve, reject) => {
       const client = this.ensureClient();
-      const t = client.add(magnet, { destroyStoreOnDestroy: true } as any, (t) => {
-        if (t.torrentFile) {
-          void saveTorrentMeta(id, t.torrentFile);
-        }
-        const files = t.files.map((f) => ({
-          path: f.path,
-          length: f.length,
-          downloaded: 0,
-          selected: true,
-        }));
-        t.destroy();
+      let done = false;
+      let t: any;
+
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
         this.pendingMetadata.delete(id);
-        resolve(files);
-      });
-      t.on("error", (err) => {
-        t.destroy();
+        if (t) {
+          try {
+            t.destroy();
+          } catch {}
+        }
+        reject(new Error("Timeout fetching torrent metadata"));
+      }, timeoutMs);
+
+      try {
+        t = client.add(magnet, { destroyStoreOnDestroy: true } as any, (torrent: any) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          if (torrent.torrentFile) {
+            void saveTorrentMeta(id, torrent.torrentFile);
+          }
+          const files = torrent.files.map((f: any) => ({
+            path: f.path,
+            length: f.length,
+            downloaded: 0,
+            selected: true,
+          }));
+          try {
+            torrent.destroy();
+          } catch {}
+          this.pendingMetadata.delete(id);
+          resolve(files);
+        });
+
+        t.on("error", (err: unknown) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          try {
+            t.destroy();
+          } catch {}
+          this.pendingMetadata.delete(id);
+          reject(err);
+        });
+      } catch (err) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
         this.pendingMetadata.delete(id);
         reject(err);
-      });
+      }
     });
 
     this.pendingMetadata.set(id, promise);
@@ -516,6 +550,7 @@ export class TorrentEngine {
       this.serverPromise = null;
     }
     this.torrents.clear();
+    this.pendingMetadata.clear();
     // Never block shutdown on webtorrent's async teardown: hand off the client
     // destroy to a later tick and let the OS reclaim sockets if we exit first.
     const client = this.client;

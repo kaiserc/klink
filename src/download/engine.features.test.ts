@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockTorrentMap = new Map<string, any>();
 const throttleCalls: { down: number; up: number }[] = [];
+let mockAddTorrent: ((t: any) => void) | null = null;
 
 vi.mock("webtorrent", () => {
   return {
@@ -15,6 +16,15 @@ vi.mock("webtorrent", () => {
         const last = throttleCalls[throttleCalls.length - 1];
         if (last) last.up = rate;
       }
+      add(_source: string, _opts: any, cb?: (t: any) => void): EventEmitter {
+        const t = new EventEmitter() as any;
+        t.destroy = vi.fn();
+        if (cb && mockAddTorrent) {
+          mockAddTorrent(t);
+          cb(t);
+        }
+        return t;
+      }
       destroy(): void {}
     },
   };
@@ -23,6 +33,7 @@ vi.mock("webtorrent", () => {
 afterEach(() => {
   mockTorrentMap.clear();
   throttleCalls.length = 0;
+  mockAddTorrent = null;
   vi.resetModules();
 });
 
@@ -140,4 +151,35 @@ describe("TorrentEngine Fork Features", () => {
 
     engine.destroy();
   });
+
+  it("fetchMetadata() rejects with timeout if swarm does not respond", async () => {
+    const { TorrentEngine } = await import("./engine");
+    const engine = new TorrentEngine();
+
+    // mockAddTorrent is null, so the add callback is never called
+    await expect(
+      engine.fetchMetadata("dead-torrent", "magnet:?xt=urn:btih:dead", 50)
+    ).rejects.toThrow("Timeout fetching torrent metadata");
+
+    engine.destroy();
+  });
+
+  it("fetchMetadata() resolves files when torrent metadata arrives", async () => {
+    const { TorrentEngine } = await import("./engine");
+    const engine = new TorrentEngine();
+
+    mockAddTorrent = (t) => {
+      t.files = [
+        { path: "track1.mp3", length: 12345 },
+        { path: "track2.mp3", length: 67890 },
+      ];
+    };
+
+    const files = await engine.fetchMetadata("live-torrent", "magnet:?xt=urn:btih:live", 1000);
+    expect(files).toHaveLength(2);
+    expect(files[0]).toMatchObject({ path: "track1.mp3", length: 12345, selected: true });
+
+    engine.destroy();
+  });
 });
+

@@ -95,4 +95,13 @@ describe("filterResults", () => {
     ];
     expect(filterResults(list, false, "ubuntu size:>2kb").map(x => x.infoHash)).toEqual(["b"]);
   });
+
+  it("returns empty list immediately on invalid numeric filter", () => {
+    const list = [
+      r({ infoHash: "a", seeders: 10 }),
+      r({ infoHash: "b", seeders: 20 }),
+    ];
+    expect(filterResults(list, false, "seed:invalid")).toEqual([]);
+  });
 });
+

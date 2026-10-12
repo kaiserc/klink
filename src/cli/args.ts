@@ -37,7 +37,7 @@ export type CliCommand =
   | { kind: "files"; port?: number; host?: string; token?: string; dir?: string; daemon?: boolean }
   | { kind: "attach" }
   | { kind: "update"; force?: boolean }
-  | { kind: "search"; query: string; category?: SearchCategory }
+  | { kind: "search"; query: string; category?: SearchCategory; timeoutMs?: number }
   | { kind: "invalid"; arg: string };
 
 // Valueless boolean flags for the headless subcommands (everything else is a
@@ -101,7 +101,9 @@ function parseCommand(argv: string[]): CliCommand {
   if (a === "update") return { kind: "update", force: args.slice(1).includes("--force") };
   if (a === "search") {
     const { flags, rest } = readFlags(args.slice(1));
-    const unknownFlag = Object.keys(flags).find((flag) => flag !== "category");
+    const unknownFlag = Object.keys(flags).find(
+      (flag) => flag !== "category" && flag !== "timeout",
+    );
     const danglingFlag = rest.find((arg) => arg.startsWith("--"));
     if (unknownFlag) return { kind: "invalid", arg: `search (unknown --${unknownFlag})` };
     if (danglingFlag) return { kind: "invalid", arg: `search (invalid ${danglingFlag})` };
@@ -109,8 +111,16 @@ function parseCommand(argv: string[]): CliCommand {
     const query = rest.join(" ").trim();
     if (!query) return { kind: "invalid", arg: "search (missing query)" };
 
+    // Unlike --seed-time, 0 is refused rather than read as "no limit": a
+    // caller passing down what is left of its own budget should get an error
+    // when that reaches zero, not a search that never gives up.
+    const timeoutMs = flags.timeout === undefined ? undefined : parseDuration(flags.timeout);
+    if (timeoutMs === null || timeoutMs === 0) {
+      return { kind: "invalid", arg: `search (invalid timeout '${flags.timeout}')` };
+    }
+
     const category = flags.category;
-    if (category === undefined) return { kind: "search", query };
+    if (category === undefined) return { kind: "search", query, timeoutMs };
     if (
       category === "games" ||
       category === "movies" ||
@@ -119,7 +129,7 @@ function parseCommand(argv: string[]): CliCommand {
       category === "ebooks" ||
       category === "audiobooks"
     ) {
-      return { kind: "search", query, category };
+      return { kind: "search", query, category, timeoutMs };
     }
     return { kind: "invalid", arg: `search (invalid category '${category}')` };
   }
@@ -189,7 +199,7 @@ usage
   klink "magnet:?xt=..."     start a download on launch
   klink path/to/file.torrent open a .torrent file on launch
   klink search <query>        headless: print search results as JSON
-    [--category games|movies|tv|anime|ebooks|audiobooks]
+    [--category games|movies|tv|anime|ebooks|audiobooks] [--timeout <dur>]
   klink seed <path>          headless: share files you already have
   klink watch <dir>          headless: download torrents dropped into <dir>
   klink serve                headless: HTTP add API (POST /add) on :9161
@@ -208,6 +218,11 @@ playlist.m3u in each folder containing 2+ audio/video files, including nested
 folders, in natural filename order. Single-file folders are skipped and
 existing playlists are kept. Pass --no-playlist (or set TORLINK_NO_PLAYLIST=1)
 to disable creation; existing playlists remain on disk.
+
+search (no TUI): one JSON document on stdout, with a per-source report under
+"sources". --timeout <dur> caps the whole search (default 45s; e.g. 20s, 2m).
+A source that has not answered by then is reported with code "timeout" and
+the results from the others still print. Exit 1 only when no source answered.
 
 watch mode (no TUI): drop a .torrent, or a .magnet/.txt holding a magnet or
 info hash, into <dir> and it downloads then seeds. Add --to <dir> to choose

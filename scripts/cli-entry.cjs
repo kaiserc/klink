@@ -12,6 +12,8 @@ if (major < 26) {
   process.exit(1);
 }
 
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'production';
+
 // Remove Node's default stderr warning handler early so warnings during require/import
 // do not leak into the terminal TUI.
 process.removeAllListeners('warning');

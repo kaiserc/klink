@@ -6,6 +6,10 @@ import { containUnhandledRejections, containWarnings, logCrash } from "./util/cr
 import { VERSION } from "./version";
 import { App } from "./ui/App";
 
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "production";
+}
+
 const cmd = parseCliArgs(process.argv.slice(2));
 
 if (cmd.kind === "help") {
@@ -14,7 +18,7 @@ if (cmd.kind === "help") {
 }
 
 if (cmd.kind === "version") {
-  console.log(`torlink v${VERSION}`);
+  console.log(`klink v${VERSION}`);
   process.exit(0);
 }
 

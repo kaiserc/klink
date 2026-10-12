@@ -127,13 +127,17 @@ describe("TorrentEngine.filePaths", () => {
   });
 });
 
-describe("TorrentEngine uTP opt-out (TORLINK_NO_UTP / KLINK_NO_UTP)", () => {
-  it("leaves uTP on by default, the way other BitTorrent clients ship it", async () => {
+describe("TorrentEngine uTP configuration", () => {
+  it("disables uTP by default to prevent socket buffer exhaustion (WSAENOBUFS)", async () => {
     const { TorrentEngine } = await import("./engine");
     const origTorlink = process.env.TORLINK_NO_UTP;
     const origKlink = process.env.KLINK_NO_UTP;
+    const origEnableTorlink = process.env.TORLINK_ENABLE_UTP;
+    const origEnableKlink = process.env.KLINK_ENABLE_UTP;
     delete process.env.TORLINK_NO_UTP;
     delete process.env.KLINK_NO_UTP;
+    delete process.env.TORLINK_ENABLE_UTP;
+    delete process.env.KLINK_ENABLE_UTP;
     try {
       const engine = new TorrentEngine();
       engine.add(
@@ -144,19 +148,48 @@ describe("TorrentEngine uTP opt-out (TORLINK_NO_UTP / KLINK_NO_UTP)", () => {
       );
       engine.destroy();
     } finally {
-      if (origTorlink === undefined) delete process.env.TORLINK_NO_UTP;
-      else process.env.TORLINK_NO_UTP = origTorlink;
-      if (origKlink === undefined) delete process.env.KLINK_NO_UTP;
-      else process.env.KLINK_NO_UTP = origKlink;
+      if (origTorlink !== undefined) process.env.TORLINK_NO_UTP = origTorlink;
+      if (origKlink !== undefined) process.env.KLINK_NO_UTP = origKlink;
+      if (origEnableTorlink !== undefined) process.env.TORLINK_ENABLE_UTP = origEnableTorlink;
+      if (origEnableKlink !== undefined) process.env.KLINK_ENABLE_UTP = origEnableKlink;
+    }
+    expect(constructorCalls).toHaveLength(1);
+    expect(constructorCalls[0]).toMatchObject({ utp: false });
+  });
+
+  it("enables uTP when KLINK_ENABLE_UTP or TORLINK_ENABLE_UTP is set", async () => {
+    const { TorrentEngine } = await import("./engine");
+    const origTorlink = process.env.TORLINK_NO_UTP;
+    const origKlink = process.env.KLINK_NO_UTP;
+    const origEnableKlink = process.env.KLINK_ENABLE_UTP;
+    delete process.env.TORLINK_NO_UTP;
+    delete process.env.KLINK_NO_UTP;
+    process.env.KLINK_ENABLE_UTP = "1";
+    try {
+      const engine = new TorrentEngine();
+      engine.add(
+        "test-id",
+        "magnet:?xt=urn:btih:0000000000000000000000000000000000000000",
+        "/downloads",
+        {},
+      );
+      engine.destroy();
+    } finally {
+      if (origTorlink !== undefined) process.env.TORLINK_NO_UTP = origTorlink;
+      if (origKlink !== undefined) process.env.KLINK_NO_UTP = origKlink;
+      if (origEnableKlink === undefined) delete process.env.KLINK_ENABLE_UTP;
+      else process.env.KLINK_ENABLE_UTP = origEnableKlink;
     }
     expect(constructorCalls).toHaveLength(1);
     expect(constructorCalls[0]).not.toHaveProperty("utp", false);
   });
 
-  it("passes utp:false when TORLINK_NO_UTP or KLINK_NO_UTP is set, so utp-native cannot exhaust sockets", async () => {
+  it("passes utp:false when TORLINK_NO_UTP or KLINK_NO_UTP is set", async () => {
     const { TorrentEngine } = await import("./engine");
     const origTorlink = process.env.TORLINK_NO_UTP;
     const origKlink = process.env.KLINK_NO_UTP;
+    const origEnableKlink = process.env.KLINK_ENABLE_UTP;
+    process.env.KLINK_ENABLE_UTP = "1";
     process.env.KLINK_NO_UTP = "1";
     delete process.env.TORLINK_NO_UTP;
     try {
@@ -169,10 +202,12 @@ describe("TorrentEngine uTP opt-out (TORLINK_NO_UTP / KLINK_NO_UTP)", () => {
       );
       engine.destroy();
     } finally {
-      if (origTorlink === undefined) delete process.env.TORLINK_NO_UTP;
-      else process.env.TORLINK_NO_UTP = origTorlink;
-      if (origKlink === undefined) delete process.env.KLINK_NO_UTP;
-      else process.env.KLINK_NO_UTP = origKlink;
+      if (origTorlink !== undefined) process.env.TORLINK_NO_UTP = origTorlink;
+      else delete process.env.TORLINK_NO_UTP;
+      if (origKlink !== undefined) process.env.KLINK_NO_UTP = origKlink;
+      else delete process.env.KLINK_NO_UTP;
+      if (origEnableKlink !== undefined) process.env.KLINK_ENABLE_UTP = origEnableKlink;
+      else delete process.env.KLINK_ENABLE_UTP;
     }
     expect(constructorCalls).toHaveLength(1);
     expect(constructorCalls[0]).toMatchObject({ utp: false });

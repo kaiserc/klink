@@ -75,20 +75,26 @@ export class TorrentEngine {
       // on macOS because the port is permanently taken, so disable it
       // and let UPnP handle NAT traversal instead.
       //
-      // TORLINK_NO_UTP / KLINK_NO_UTP turns uTP off. It stays on by default,
-      // the way every major client ships it, but webtorrent can exhaust the socket
-      // pool with it: `utp-native` multiplexes perfectly well (UTP.prototype.connect
-      // reuses an existing binding) and webtorrent already holds a bound uTP
-      // socket on the TCP port, yet lib/torrent.js dials through the
-      // module-level `UTP.connect`, which allocates a fresh UDP socket per
-      // outgoing peer. Sockets then scale with peer count until the ephemeral
-      // port pool or buffer space runs out (WSAENOBUFS on Windows, EMFILE
-      // against the fd limit elsewhere), and a failed bind is re-emitted on an
-      // emitter nothing listens to, so it arrives as an uncaughtException and
-      // kills the process. The opt-out is a workaround until that dial path is
-      // fixed upstream.
+      // uTP in WebTorrent relies on `utp-native`, which allocates an independent
+      // UDP socket for every outgoing peer connection attempt. Under heavy swarm
+      // discovery and reconnection churn, this rapidly exhausts socket buffer space
+      // and ephemeral ports on Windows (WSAENOBUFS / ENOBUFS: "no buffer space available"),
+      // leading to severe network sluggishness. Furthermore, when binding fails,
+      // utp-native emits an unhandled 'error' event on an orphaned EventEmitter with
+      // no listeners, crashing the process to the terminal as an uncaughtException.
+      //
+      // In Klink, we disable uTP by default ({ utp: false }) so peers connect exclusively
+      // via standard, pooled TCP connections. TCP is universally supported by all
+      // BitTorrent clients, fully error-handled, and immune to UDP buffer exhaustion.
+      // Users can explicitly opt into uTP by setting KLINK_ENABLE_UTP=1 or
+      // TORLINK_ENABLE_UTP=1 (unless KLINK_NO_UTP / TORLINK_NO_UTP is set).
+      const enableUtp =
+        (process.env.KLINK_ENABLE_UTP === "1" || process.env.TORLINK_ENABLE_UTP === "1") &&
+        !process.env.KLINK_NO_UTP &&
+        !process.env.TORLINK_NO_UTP;
+
       const opts = {
-        ...(process.env.TORLINK_NO_UTP || process.env.KLINK_NO_UTP ? { utp: false } : {}),
+        ...(!enableUtp ? { utp: false } : {}),
         ...(process.platform === "darwin" ? { natPmp: false } : {}),
       };
       this.client = new WebTorrent(opts);

@@ -43,6 +43,16 @@ export function containUnhandledRejections(opts: { echo?: boolean } = {}): void 
 export function containWarnings(opts: { echo?: boolean } = {}): void {
   process.removeAllListeners("warning");
   process.on("warning", (warning) => {
+    if (
+      warning.name === "MaxPerformanceEntryBufferExceededWarning" ||
+      warning.message.includes("performance entry buffer")
+    ) {
+      if (typeof performance !== "undefined" && typeof performance.clearMeasures === "function") {
+        performance.clearMeasures();
+        performance.clearMarks();
+      }
+      return;
+    }
     logCrash("warning", warning);
     if (opts.echo) {
       const msg = warning instanceof Error ? (warning.stack ?? warning.message) : String(warning);

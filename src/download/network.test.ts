@@ -51,4 +51,19 @@ describe("Network Binding", () => {
     socket.bind(1234);
     expect(mockDgramBind).toHaveBeenCalledWith(1234, "10.8.0.2");
   });
+
+  it("does not bind loopback or IPC connections to bindAddress and respects clearing bindAddress", () => {
+    applyNetworkBinding({ ...defaultConfig, bindAddress: "10.8.0.2" });
+
+    net.connect(8080, "127.0.0.1");
+    expect(mockNetConnect).toHaveBeenLastCalledWith(8080, "127.0.0.1");
+
+    net.connect("/tmp/ipc.sock");
+    expect(mockNetConnect).toHaveBeenLastCalledWith("/tmp/ipc.sock");
+
+    const socket = dgram.createSocket("udp4");
+    applyNetworkBinding({ ...defaultConfig, bindAddress: null });
+    socket.bind(4321);
+    expect(mockDgramBind).toHaveBeenLastCalledWith(4321);
+  });
 });

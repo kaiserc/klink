@@ -75,7 +75,7 @@ if (cmd.kind === "update") {
   const options = {
     port: cmd.port,
     host: cmd.host,
-    token: cmd.token ?? process.env.TORLINK_API_TOKEN,
+    token: cmd.token ?? process.env.KLINK_API_TOKEN ?? process.env.TORLINK_API_TOKEN,
     downloadDir: cmd.downloadDir,
     playlist: cmd.playlist,
     seedTimeMs: cmd.seedTimeMs,
@@ -90,7 +90,7 @@ if (cmd.kind === "update") {
   const options = {
     port: cmd.port,
     host: cmd.host,
-    token: cmd.token ?? process.env.TORLINK_FILES_TOKEN,
+    token: cmd.token ?? process.env.KLINK_FILES_TOKEN ?? process.env.TORLINK_FILES_TOKEN,
     dir: cmd.dir,
   };
   void import("./daemon/files").then(({ runFiles }) => runFiles(options).catch(failHeadless));
@@ -115,8 +115,8 @@ if (cmd.kind === "update") {
 // Enter the alt-screen, clear buffer, and hide the hardware cursor: the TUI draws its own
 // cursor (the search field block, list pointers), so the terminal's should
 // stay hidden. restoreTerminal shows it again on exit.
-process.stdout.write("\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l\x1b[22;0t\x1b]0;torlink\x07");
-if (process.platform === "win32") process.title = "torlink";
+process.stdout.write("\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l\x1b[22;0t\x1b]0;klink\x07");
+if (process.platform === "win32") process.title = "klink";
 
 let restored = false;
 function restoreTerminal(): void {

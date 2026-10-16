@@ -215,7 +215,7 @@ export function App({
   // Best-effort, once per launch, off the hot path: if a newer release exists,
   // surface a quiet banner. Any failure (offline, opt-out) just leaves it hidden.
   useEffect(() => {
-    if (process.env.TORLINK_NO_UPDATE_CHECK) return;
+    if (process.env.KLINK_NO_UPDATE_CHECK || process.env.TORLINK_NO_UPDATE_CHECK) return;
     let alive = true;
     void (async () => {
       const latest = await fetchLatestVersion();
@@ -234,6 +234,7 @@ export function App({
     // Flush all state synchronously up front so nothing is lost to the hard
     // exit; the unmount effect still runs suspend() for the engine teardown.
     autoDownloader?.stop();
+    stopWebServer();
     queue?.persistSync();
     if (onQuit) onQuit();
     else exit();
@@ -276,7 +277,8 @@ export function App({
   useEffect(() => {
     setInspectingId(null);
     setInspectingPeersId(null);
-  }, [section]);
+    setInspectingMetaId(null);
+  }, [section, setInspectingId, setInspectingMetaId]);
 
   useEffect(
     () => () => {
@@ -285,6 +287,7 @@ export function App({
         autoCloseTimerRef.current = null;
       }
       autoDownloader?.stop();
+      stopWebServer();
       queue?.suspend();
     },
     [queue, autoDownloader],
@@ -745,7 +748,7 @@ export function App({
         const enabled = !config.webServerEnabled;
         const c = { ...config, webServerEnabled: enabled };
         setConfig(c);
-        void saveConfig(c);
+        setNotice(enabled ? `Web server enabled on port ${c.webServerPort}` : "Web server disabled");
         return;
       }
       if (input === "t") {
@@ -951,7 +954,7 @@ export function App({
         <Box
           height={bodyH}
           marginTop={compact ? 0 : 1}
-          display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}
+          display={showHelp || editingFolder || editingTrackers || editingNetwork || pendingDownload ? "none" : "flex"}
           overflow="hidden"
         >
           <Sidebar />
@@ -975,7 +978,7 @@ export function App({
         </Box>
 
         {showFooter ? (
-          <Box display={showHelp || editingFolder || editingTrackers || pendingDownload ? "none" : "flex"}>
+          <Box display={showHelp || editingFolder || editingTrackers || editingNetwork || pendingDownload ? "none" : "flex"}>
             <Footer hints={footerHints(region, section, store.config.throttleEnabled, inspectingPeersId, downloadFocus, seedFocus, !!inspectingId, inspectFocusSelected, resultFocus, !!inspectingMetaId, store.autoClose)} />
           </Box>
         ) : null}

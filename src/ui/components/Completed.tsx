@@ -12,8 +12,20 @@ const SIZE_W = 10;
 const SRC_W = 4;
 
 export function Completed() {
-  const { queue, region, contentWidth, listRows, openDownloadFolder, setInspectingId, inspectingId, inspectingPeersId, requestConfirm } =
-    useStore();
+  const {
+    queue,
+    region,
+    contentWidth,
+    listRows,
+    openDownloadFolder,
+    exportTorrent,
+    setInspectingId,
+    setInspectingMetaId,
+    inspectingId,
+    inspectingPeersId,
+    inspectingMetaId,
+    requestConfirm,
+  } = useStore();
   const history = useQueueHistory(queue);
   const seeds = useSeeds(queue);
   
@@ -33,17 +45,23 @@ export function Completed() {
         if (h) {
           requestConfirm(`Remove and delete '${truncate(cleanText(h.name), 40)}'?`, () => queue.removeHistory(h.id));
         }
-      } else if (input === "x") {
-        requestConfirm("Clear completed downloads history? Files will be deleted.", () => queue.clearHistory());
+      } else if (input === "x" || input === "C") {
+        requestConfirm("Clear completed downloads history? Files will be deleted.", () => queue.clearCompleted());
       } else if (input === "e") {
         const h = completedHistory[clamped];
         if (h) openDownloadFolder(h.skipFolderIsolation ? h.dir : getCompletedDir(h.dir));
+      } else if (input === "s") {
+        const h = completedHistory[clamped];
+        if (h) exportTorrent({ id: h.id, name: h.name });
+      } else if (input === "v") {
+        const h = completedHistory[clamped];
+        if (h) setInspectingMetaId(h.id, h.magnet);
       } else if (input === "i" || input === "Enter" || input === " ") {
         const h = completedHistory[clamped];
-        if (h) setInspectingId(h.id);
+        if (h) setInspectingId(h.id, h.magnet);
       }
     },
-    { isActive: focused && total > 0 && !inspectingId && !inspectingPeersId },
+    { isActive: focused && total > 0 && !inspectingId && !inspectingPeersId && !inspectingMetaId },
   );
 
   const panelH = Math.max(5, listRows - 1);

@@ -84,7 +84,7 @@ async function restartDaemons(): Promise<void> {
 }
 
 export async function runUpdate(opts: { force?: boolean } = {}): Promise<void> {
-  console.log(`torlink v${VERSION}`);
+  console.log(`klink v${VERSION}`);
 
   const manifest = readManifest();
   if (!manifest) {

@@ -43,4 +43,20 @@ describe("deleteSeedData", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("does not wipe the root Completed/Seeding/Downloads container directory when torrent is named Completed", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "torlink-delguard-"));
+    try {
+      const completedDir = getCompletedDir(tmpDir);
+      const otherFile = path.join(completedDir, "keep-me.mp4");
+      await fs.mkdir(completedDir, { recursive: true });
+      await fs.writeFile(otherFile, "important");
+
+      await deleteSeedData(tmpDir, "Completed");
+
+      expect(await fs.stat(otherFile).then(() => true).catch(() => false)).toBe(true);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });

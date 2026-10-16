@@ -98,10 +98,11 @@ describe("filterResults", () => {
 
   it("returns empty list immediately on invalid numeric filter", () => {
     const list = [
-      r({ infoHash: "a", seeders: 10 }),
-      r({ infoHash: "b", seeders: 20 }),
+      r({ infoHash: "a", seeders: 10, sizeBytes: 1000 }),
+      r({ infoHash: "b", seeders: 20, sizeBytes: 0 }),
     ];
     expect(filterResults(list, false, "seed:invalid")).toEqual([]);
+    expect(filterResults(list, false, "size:invalid")).toEqual([]);
   });
 });
 

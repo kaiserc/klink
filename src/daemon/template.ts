@@ -5,12 +5,21 @@ export interface Entry {
 }
 
 function formatSize(bytes: number | undefined): string {
-  if (bytes === undefined) return "";
+  if (bytes === undefined || !Number.isFinite(bytes) || bytes < 0) return "";
   if (bytes === 0) return "0 B";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
   return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function getIcon(entry: Entry): string {
@@ -55,6 +64,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
     return a.name.localeCompare(b.name);
   });
 
+  const safeDirPath = escapeHtml(dirPath);
   const parentLink = dirPath !== "/" ? `<a href=".." class="entry parent-link"><div class="entry-icon">🔙</div><div class="entry-name">.. (Parent Directory)</div></a>` : "";
 
   const entriesHtml = sortedEntries
@@ -62,7 +72,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
       (entry) => `
     <a href="./${encodeURIComponent(entry.name)}${entry.type === "dir" ? "/" : ""}" class="entry">
       <div class="entry-icon">${getIcon(entry)}</div>
-      <div class="entry-name">${entry.name}</div>
+      <div class="entry-name">${escapeHtml(entry.name)}</div>
       <div class="entry-size">${formatSize(entry.size)}</div>
     </a>
   `
@@ -74,7 +84,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Index of ${dirPath}</title>
+  <title>Index of ${safeDirPath}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -281,7 +291,7 @@ export function renderDirectoryListing(dirPath: string, entries: Entry[]): strin
   <header>
     <h1>
       <span>⚡</span>
-      <span>Index of ${dirPath}</span>
+      <span>Index of ${safeDirPath}</span>
     </h1>
     <div class="theme-switcher">
       <label for="theme-select" style="font-size: 0.875rem; color: var(--text-muted); font-weight: 500;">Theme:</label>

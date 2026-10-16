@@ -21,13 +21,14 @@ export class AutoDownloader {
     if (this.timer || this.initialTimer) return;
     const interval = this.config.autoDownloadIntervalMs > 0 ? this.config.autoDownloadIntervalMs : 3600000;
     this.timer = setInterval(() => void this.run(), interval);
-    
+    this.timer.unref?.();
+
     // Initial run after a short delay so boot isn't blocked
     this.initialTimer = setTimeout(() => {
       this.initialTimer = null;
       void this.run();
     }, 5000);
-    this.initialTimer.unref(); // prevent this from blocking process exit
+    this.initialTimer.unref?.(); // prevent this from blocking process exit
   }
 
   stop() {
@@ -42,9 +43,10 @@ export class AutoDownloader {
   }
 
   setConfig(config: Config) {
+    const prevInterval = this.config.autoDownloadIntervalMs;
     this.config = config;
-    // Restart timer if interval changed
-    if (this.timer) {
+    // Only restart timer if interval actually changed
+    if ((this.timer || this.initialTimer) && config.autoDownloadIntervalMs !== prevInterval) {
       this.stop();
       this.start();
     }

@@ -6,7 +6,7 @@ import { COLOR } from "../theme";
 import { formatBytes, formatBytesPerSec, truncate } from "../../util/format";
 
 export function PeerInspector({ id }: { id: string }) {
-  const { queue, contentWidth, region } = useStore();
+  const { queue, contentWidth, listRows, region } = useStore();
   const peers = usePeers(queue, id);
   const [sortMode, setSortMode] = useState<"down" | "up" | "dl" | "ul">("down");
 
@@ -40,13 +40,17 @@ export function PeerInspector({ id }: { id: string }) {
       })
     : [];
 
+  const panelH = Math.max(5, listRows - 1);
+  const maxPeers = Math.max(1, panelH - 3);
+  const visiblePeers = sortedPeers.slice(0, maxPeers);
+
   const hProps = (mode: string) => ({
     color: sortMode === mode ? COLOR.accent : COLOR.alt,
     bold: true,
   });
 
   return (
-    <Panel title={`Peers: ${truncate(name, 40)}`} width={contentWidth}>
+    <Panel title={`Peers: ${truncate(name, 40)}`} width={contentWidth} focused={region === "content"} height={panelH}>
       <Box flexDirection="column" paddingX={1} flexGrow={1}>
         {!isActive ? (
           <Box marginTop={1}>
@@ -66,7 +70,7 @@ export function PeerInspector({ id }: { id: string }) {
               <Box width={12} flexShrink={0} justifyContent="flex-end"><Text {...hProps("dl")}>DL Bytes</Text></Box>
               <Box width={12} flexShrink={0} justifyContent="flex-end"><Text {...hProps("ul")}>UL Bytes</Text></Box>
             </Box>
-            {sortedPeers.map((p, i) => {
+            {visiblePeers.map((p, i) => {
               const clientStr = p.client && p.client !== "Unknown" ? p.client : p.peerId;
               return (
                 <Box key={`${p.ip}-${i}`}>

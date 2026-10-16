@@ -3,9 +3,6 @@ import WebTorrent, { type Torrent } from "webtorrent";
 import { NodeServer } from "webtorrent/lib/server.js";
 import type { TorrentFileInfo, PeerInfo } from "./types";
 import { saveTorrentMeta } from "./persist";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
 
 export interface TorrentProgress {
   progress: number;
@@ -412,12 +409,12 @@ export class TorrentEngine {
 
     if (!this.serverPromise) {
       this.server = this.client!.createServer();
-      
+
       this.serverPromise = new Promise<void>((resolve, reject) => {
-        this.server.server.once('error', (err: any) => {
-          if (err.code === 'EADDRINUSE') {
-            reject(err);
-          }
+        this.server.server.once("error", (err: any) => {
+          this.server = null;
+          this.serverPromise = null;
+          reject(err);
         });
         this.server.listen(0, () => {
           // Intercept safe ASCII URLs and bypass WebTorrent's broken URI router (which drops `#`, `?`, and crashes on `%`)
@@ -428,13 +425,11 @@ export class TorrentEngine {
 
           this.server.server.on("request", (req: any, res: any) => {
             if (req.url && req.url.startsWith("/torlink-stream/")) {
-              console.log("[Stream] Incoming request:", req.method, req.url);
-              console.log("[Stream] Headers:", req.headers);
               const parts = req.url.split("/");
               if (parts.length >= 4) {
                 const infoHash = parts[2];
                 const fileIndexStr = parts[3];
-                
+
                 let torrent: Torrent | undefined;
                 for (const t of this.torrents.values()) {
                   if (t.infoHash === infoHash) {
@@ -446,56 +441,48 @@ export class TorrentEngine {
                   const fileIndex = parseInt(fileIndexStr, 10);
                   const file = torrent.files[fileIndex];
                   if (file) {
-                    console.log("[Stream] Found file:", file.name);
                     try {
                       // Bypass WebTorrent's broken URL router completely
                       const fakeRes = { headers: {} as Record<string, any> };
                       const result = NodeServer.serveFile(file, req, fakeRes);
-                      
+
                       // Clean undefined headers to prevent ERR_HTTP_INVALID_HEADER_VALUE
                       for (const key of Object.keys(result.headers)) {
                         if (result.headers[key] === undefined) {
                           delete result.headers[key];
                         }
                       }
-                      
+
                       const status = result.statusCode || result.status || 200;
-                      console.log("[Stream] serveFile status:", status);
                       res.writeHead(status, result.headers);
-                      
+
                       if (result.body && typeof result.body.pipe === "function") {
                         result.body.pipe(res);
-                        res.on('close', () => {
-                          if (typeof result.body.destroy === 'function') {
+                        res.on("close", () => {
+                          if (typeof result.body.destroy === "function") {
                             result.body.destroy();
                           }
                         });
-                        console.log("[Stream] Piped stream to response");
                       } else if (result.body) {
                         res.end(result.body);
-                        console.log("[Stream] Sent body buffer to response");
                       } else {
                         res.end();
-                        console.log("[Stream] Sent empty response");
                       }
-                    } catch (err) {
-                      console.error("[Stream] Error in serveFile:", err);
-                      res.writeHead(500);
+                    } catch {
+                      if (!res.headersSent) {
+                        res.writeHead(500);
+                      }
                       res.end();
                     }
                     return;
-                  } else {
-                    console.error("[Stream] File not found at index:", fileIndex);
                   }
-                } else {
-                  console.error("[Stream] Torrent not found for infohash:", infoHash);
                 }
               }
             }
             // Fallback to original WebTorrent listeners
             originalListeners.forEach((fn: any) => fn(req, res));
           });
-          
+
           resolve();
         });
       });

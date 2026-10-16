@@ -30,15 +30,24 @@ import { promises as fs, existsSync, mkdirSync, renameSync } from "node:fs";
 import path from "node:path";
 import { getDownloadsDir, getSeedingDir, getCompletedDir } from "../config/folder";
 
+const ISOLATED_SUBDIRS = new Set(["downloads", "seeding", "completed"]);
+
+function safeEntryName(name: string): string | null {
+  const base = path.basename(name.trim());
+  if (!base || base === "." || base === "..") return null;
+  return base;
+}
+
 function migrateLegacyPathSync(baseDir: string, name: string, targetSubfolder: "Downloads" | "Seeding" | "Completed"): void {
-  if (!name) return;
-  const legacyPath = path.join(baseDir, name);
+  const safeName = safeEntryName(name);
+  if (!safeName || ISOLATED_SUBDIRS.has(safeName.toLowerCase())) return;
+  const legacyPath = path.join(baseDir, safeName);
   const targetBase = targetSubfolder === "Downloads"
     ? getDownloadsDir(baseDir)
     : targetSubfolder === "Seeding"
     ? getSeedingDir(baseDir)
     : getCompletedDir(baseDir);
-  const targetPath = path.join(targetBase, name);
+  const targetPath = path.join(targetBase, safeName);
 
   try {
     if (existsSync(legacyPath)) {
@@ -84,7 +93,7 @@ const HISTORY_MAX = 500;
 // Max torrents allowed to actively download at once. Overflow waits as "queued"
 // and starts automatically when a slot frees. 0 / unset = unlimited (default).
 function readMaxDownloads(): number {
-  const v = Number(process.env.TORLINK_MAX_DOWNLOADS);
+  const v = Number(process.env.KLINK_MAX_DOWNLOADS || process.env.TORLINK_MAX_DOWNLOADS);
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 
@@ -127,7 +136,7 @@ export class DownloadQueue extends EventEmitter {
   constructor(opts?: { maxDownloads?: number; playlist?: boolean }) {
     super();
     this.maxDownloads = opts?.maxDownloads ?? readMaxDownloads();
-    this.playlist = opts?.playlist ?? !process.env.TORLINK_NO_PLAYLIST;
+    this.playlist = opts?.playlist ?? !(process.env.KLINK_NO_PLAYLIST || process.env.TORLINK_NO_PLAYLIST);
   }
 
   // Extra announce URLs appended to every torrent added from now on.
@@ -335,7 +344,9 @@ export class DownloadQueue extends EventEmitter {
 
   private complete(it: QueueItem): void {
     this.items.delete(it.id);
-    if (this.playlist) void writePlaylists(it.dir, this.engine.filePaths(it.id));
+    const playlistDone = this.playlist
+      ? Promise.resolve(writePlaylists(it.dir, this.engine.filePaths(it.id))).catch(() => {})
+      : undefined;
     this.engine.remove(it.id);
 
     if (it.magnet) {
@@ -353,7 +364,7 @@ export class DownloadQueue extends EventEmitter {
         skipFolderIsolation: it.skipFolderIsolation,
         ...(it.seedTimeMs !== undefined ? { seedTimeMs: it.seedTimeMs } : {}),
       });
-      void this.moveAndSeed(it);
+      void this.moveAndSeed(it, playlistDone);
     }
 
     this.recordHistory(it);
@@ -365,6 +376,8 @@ export class DownloadQueue extends EventEmitter {
   }
 
   private async moveTorrent(id: string, name: string, baseDir: string, fromPhase: "Downloads" | "Seeding", toPhase: "Seeding" | "Completed"): Promise<void> {
+    const safeName = safeEntryName(name);
+    if (!safeName) return;
     const it = this.items.get(id);
     const sd = this.seeds.get(id);
     const hi = this.history.find((x) => x.id === id);
@@ -374,15 +387,15 @@ export class DownloadQueue extends EventEmitter {
     const fromBase = fromPhase === "Downloads" ? getDownloadsDir(baseDir) : getSeedingDir(baseDir);
     const toBase = toPhase === "Seeding" ? getSeedingDir(baseDir) : getCompletedDir(baseDir);
     
-    const fromPath = path.join(fromBase, name);
-    const toPath = path.join(toBase, name);
+    const fromPath = path.join(fromBase, safeName);
+    const toPath = path.join(toBase, safeName);
 
     try {
       await fs.mkdir(toBase, { recursive: true });
       if (await fs.stat(fromPath).then(() => true).catch(() => false)) {
         await fs.rename(fromPath, toPath);
-      } else {
-        const legacyPath = path.join(baseDir, name);
+      } else if (!ISOLATED_SUBDIRS.has(safeName.toLowerCase())) {
+        const legacyPath = path.join(baseDir, safeName);
         if (await fs.stat(legacyPath).then(() => true).catch(() => false)) {
           await fs.rename(legacyPath, toPath);
         }
@@ -392,8 +405,9 @@ export class DownloadQueue extends EventEmitter {
     }
   }
 
-  private async moveAndSeed(it: QueueItem): Promise<void> {
+  private async moveAndSeed(it: QueueItem, playlistDone?: Promise<void>): Promise<void> {
     if (!it.skipFolderIsolation) {
+      if (playlistDone) await playlistDone;
       await this.moveTorrent(it.id, it.name, it.dir, "Downloads", "Seeding");
     }
     const s = this.seeds.get(it.id);
@@ -632,6 +646,9 @@ export class DownloadQueue extends EventEmitter {
   exportTorrentFile(id: string): Promise<string | null> {
     const it = this.items.get(id) ?? this.seeds.get(id) ?? this.history.find((h) => h.id === id);
     if (!it) return Promise.resolve(null);
+    if (it.skipFolderIsolation) {
+      return exportTorrentMeta(it.id, it.name, it.dir);
+    }
     let targetDir = getDownloadsDir(it.dir);
     if (this.seeds.has(id)) {
       targetDir = getSeedingDir(it.dir);
@@ -1045,19 +1062,35 @@ export class DownloadQueue extends EventEmitter {
     }
   }
 
+  clearCompleted(): void {
+    const completed = this.history.filter((h) => !this.seeds.has(h.id));
+    if (completed.length === 0) return;
+    for (const h of completed) deleteTorrentMeta(h.id);
+    this.history = this.history.filter((h) => this.seeds.has(h.id));
+    void saveHistory(this.history).catch(() => {});
+    this.changed();
+
+    for (const h of completed) {
+      void this.deleteFiles(h.dir, h.name, "Completed");
+    }
+  }
+
   private async deleteFiles(dir: string, name: string, phase: "Downloads" | "Seeding" | "Completed"): Promise<void> {
-    if (!name) return;
+    const safeName = safeEntryName(name);
+    if (!safeName) return;
     const base = phase === "Downloads" ? getDownloadsDir(dir) : phase === "Seeding" ? getSeedingDir(dir) : getCompletedDir(dir);
-    const fullPath = path.join(base, name);
+    const fullPath = path.join(base, safeName);
     try {
       await fs.rm(fullPath, { recursive: true, force: true });
-    } catch (err) {
+    } catch {
       // Ignore if it's already gone
     }
-    const legacyPath = path.join(dir, name);
-    try {
-      await fs.rm(legacyPath, { recursive: true, force: true });
-    } catch (err) {}
+    if (!ISOLATED_SUBDIRS.has(safeName.toLowerCase())) {
+      const legacyPath = path.join(dir, safeName);
+      try {
+        await fs.rm(legacyPath, { recursive: true, force: true });
+      } catch {}
+    }
   }
 
   private changed(): void {

@@ -7,6 +7,8 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { getCompletedDir, getSeedingDir, getDownloadsDir } from "../config/folder";
 
+const ISOLATED_SUBDIRS = new Set(["downloads", "seeding", "completed"]);
+
 export async function deleteSeedData(dir: string, name: string): Promise<string | null> {
   const base = path.basename(name.trim());
   if (!base || base === "." || base === "..") return null;
@@ -15,7 +17,7 @@ export async function deleteSeedData(dir: string, name: string): Promise<string 
     path.join(getCompletedDir(dir), base),
     path.join(getSeedingDir(dir), base),
     path.join(getDownloadsDir(dir), base),
-    path.join(dir, base),
+    ...(ISOLATED_SUBDIRS.has(base.toLowerCase()) ? [] : [path.join(dir, base)]),
   ];
 
   for (const target of targets) {

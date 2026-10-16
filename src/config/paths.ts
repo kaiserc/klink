@@ -9,7 +9,7 @@ const base = envPaths(APP_NAME, { suffix: "" });
 // Optional override that relocates all persisted state under one folder. Tests
 // point this at a temp dir so they never touch the real user data; it also
 // doubles as a portable-state escape hatch. Off unless the env var is set.
-const override = process.env.TORLINK_STATE_DIR;
+const override = process.env.KLINK_STATE_DIR ?? process.env.TORLINK_STATE_DIR;
 const dataDir = override ? path.join(override, "data") : base.data;
 const configDir = override ? path.join(override, "config") : base.config;
 

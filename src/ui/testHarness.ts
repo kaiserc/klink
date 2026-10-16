@@ -127,6 +127,11 @@ export function fakeQueue(
       hist = [];
       em.emit("update");
     },
+    clearCompleted: (): void => {
+      const seedIds = new Set(seeds.map((s) => s.id));
+      hist = hist.filter((h) => seedIds.has(h.id));
+      em.emit("update");
+    },
     cancel: (): void => {},
     togglePause: (): void => {},
     retryFailed: (): void => {},

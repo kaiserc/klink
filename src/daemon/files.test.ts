@@ -126,5 +126,30 @@ describe("sendListing", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("escapes HTML special characters in directory listing HTML output", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "torlink-files-xss-"));
+    try {
+      const downloadsDir = path.join(tmpDir, "Downloads");
+      await fs.mkdir(downloadsDir, { recursive: true });
+      await fs.writeFile(path.join(downloadsDir, "<img src=x onerror=alert(1)>.mkv"), "movie");
+
+      let responseData = "";
+      const req = { headers: { accept: "text/html" } } as unknown as import("node:http").IncomingMessage;
+      const res = {
+        writeHead: () => {},
+        end: (data: string) => {
+          responseData = data;
+        },
+      } as unknown as import("node:http").ServerResponse;
+
+      await sendListing(req, res, downloadsDir, tmpDir, "GET");
+
+      expect(responseData).not.toContain("<img src=x onerror=alert(1)>");
+      expect(responseData).toContain("&lt;img src=x onerror=alert(1)&gt;.mkv");
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 

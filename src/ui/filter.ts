@@ -39,6 +39,9 @@ export function filterResults(
 
         if (field.startsWith("size")) {
           numRef = parseSize(valStr);
+          if (!valStr || (numRef === 0 && !/^0+(\.0+)?\s*(b|kb|mb|gb|tb|kib|mib|gib|tib)?$/i.test(valStr.trim()))) {
+            isInvalid = true;
+          }
         } else if (field.startsWith("seed") || field.startsWith("leech")) {
           numRef = parseInt(valStr, 10);
           if (isNaN(numRef)) isInvalid = true;

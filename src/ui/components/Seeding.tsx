@@ -31,7 +31,7 @@ function statusCell(seed: SeedItem | undefined): { text: string; color?: string;
 }
 
 export function Seeding() {
-  const { queue, region, contentWidth, listRows, openDownloadFolder, setSeedFocus, setInspectingId, setInspectingPeersId, setInspectingMetaId, inspectingId, inspectingPeersId, inspectingMetaId, setNotice, requestConfirm } =
+  const { queue, region, contentWidth, listRows, openDownloadFolder, exportTorrent, setSeedFocus, setInspectingId, setInspectingPeersId, setInspectingMetaId, inspectingId, inspectingPeersId, inspectingMetaId, setNotice, requestConfirm } =
     useStore();
   const history = useQueueHistory(queue);
   const seeds = useSeeds(queue);
@@ -73,15 +73,18 @@ export function Seeding() {
       } else if (input === "e") {
         const h = activeHistory[clamped];
         if (h) openDownloadFolder(h.skipFolderIsolation ? h.dir : getSeedingDir(h.dir));
+      } else if (input === "s") {
+        const h = activeHistory[clamped];
+        if (h) exportTorrent({ id: h.id, name: h.name });
       } else if (input === "i") {
         const h = activeHistory[clamped];
-        if (h) setInspectingId(h.id);
+        if (h) setInspectingId(h.id, h.magnet);
       } else if (input === "w") {
         const h = activeHistory[clamped];
         if (h) setInspectingPeersId(h.id);
       } else if (input === "v") {
         const h = activeHistory[clamped];
-        if (h) setInspectingMetaId(h.id);
+        if (h) setInspectingMetaId(h.id, h.magnet);
       }
     },
     { isActive: focused && total > 0 && !inspectingId && !inspectingPeersId && !inspectingMetaId },

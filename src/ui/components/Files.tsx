@@ -37,12 +37,12 @@ export function Files() {
         const it = queue.getItems().find(i => i.id === inspectingId);
         let baseDir = "";
         if (it) {
-          baseDir = getDownloadsDir(it.dir);
+          baseDir = it.skipFolderIsolation ? it.dir : getDownloadsDir(it.dir);
         } else {
           const h = queue.getHistory().find(i => i.id === inspectingId);
           if (h) {
             const isSeeding = queue.getSeed(h.id);
-            baseDir = isSeeding ? getSeedingDir(h.dir) : getCompletedDir(h.dir);
+            baseDir = h.skipFolderIsolation ? h.dir : (isSeeding ? getSeedingDir(h.dir) : getCompletedDir(h.dir));
           }
         }
         if (baseDir) {

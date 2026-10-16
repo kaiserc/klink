@@ -125,11 +125,11 @@ export function Downloads() {
         else if (input === "c") {
           requestConfirm(`Remove and delete '${truncate(cleanText(h.name), 40)}'?`, () => queue.removeHistory(h.id));
         }
-        else if (input === "i") setInspectingId(h.id);
+        else if (input === "i") setInspectingId(h.id, h.magnet);
         else if (input === "v") setInspectingMetaId(h.id, h.magnet);
         // Clear-all lives here, not at the top of the chain, so it can only
         // fire while the cursor is actually on the recent list.
-        else if (input === "C" || input === "x") {
+        else if (input === "C") {
           requestConfirm("Clear recent downloads history? Files will be deleted.", () => queue.clearHistory());
         }
       }

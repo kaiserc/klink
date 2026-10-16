@@ -153,7 +153,6 @@ export function footerHints(
         return [
           { keys: "d", label: "Redownload" },
           { keys: "c", label: "Remove" },
-          { keys: "x", label: "Clear" },
           FOLDER,
           TORRENT,
           SWITCH,
